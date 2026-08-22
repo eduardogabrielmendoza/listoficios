@@ -2,8 +2,6 @@ import { z } from "zod";
 export const pricingModeSchema = z.enum(["from", "hourly", "fixed", "quote"]);
 export const availabilitySchema = z.enum(["weekdays", "weekends", "emergencies", "coordinate"]);
 export const professionalDraftSchema = z.object({ firstName: z.string(), lastName: z.string(), email: z.string(), whatsapp: z.string(), categories: z.array(z.string()), customService: z.string(), experienceYears: z.number(), bio: z.string(), zones: z.array(z.string()), serviceMode: z.enum(["domicilio", "taller", "ambos"]), pricingMode: pricingModeSchema, priceAmount: z.number().nullable(), generalAvailability: z.array(availabilitySchema), preferredContact: z.enum(["whatsapp", "phone", "both"]), publicationStatus: z.enum(["draft", "published", "paused"]), acceptedTerms: z.boolean(), completed: z.boolean() });
-export const accountSchema = z.object({ id: z.string(), name: z.string(), email: z.string(), salt: z.string(), verifier: z.string(), createdAt: z.string() });
-export const sessionSchema = z.object({ accountId: z.string(), name: z.string(), email: z.string(), createdAt: z.string(), persistent: z.boolean() });
 export const favoriteListSchema = z.array(z.object({ professionalId: z.string(), createdAt: z.string() }));
 export const contactListSchema = z.array(z.object({ id: z.string(), professionalId: z.string(), professionalName: z.string(), service: z.string(), createdAt: z.string(), channel: z.enum(["whatsapp", "phone"]) }));
 export const supportTicketSchema = z.object({ id: z.string(), createdAt: z.string(), name: z.string(), email: z.string(), role: z.enum(["cliente", "profesional", "otro"]), topic: z.string(), message: z.string() });
