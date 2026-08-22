@@ -1,0 +1,2 @@
+import { adminOverview } from "@/data/admin";import { requireAdminSession } from "@/lib/auth-server";import { apiData,apiError,requestId } from "@/lib/server/api-response";
+export const dynamic="force-dynamic";export async function GET(request:Request){const id=requestId(request);try{await requireAdminSession();return apiData(await adminOverview(),{requestId:id});}catch(error){return apiError(error instanceof Error&&error.message==="UNAUTHORIZED"?"UNAUTHORIZED":"FORBIDDEN","No tenés acceso al panel administrador.",403,id);}}
