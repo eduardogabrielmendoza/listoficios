@@ -38,9 +38,10 @@ La clave secreta omite RLS y solo debe existir en Railway y `.env.local`. Nunca 
 
 Después de cargar las variables y desplegar:
 
-1. Visitá `/api/health`; debe responder `ok` para aplicación y Supabase.
-2. Creá una cuenta desde `/crear-cuenta`.
-3. En Supabase, comprobá el usuario en `Authentication > Users`.
-4. En `Table Editor > user_profiles`, comprobá que el trigger creó su perfil.
+1. Visitá `/api/health`; debe responder `ok` para la aplicación.
+2. Visitá `/api/health?dependencies=1`; debe mostrar `database: "supabase_data_api"`.
+3. Creá una cuenta desde `/crear-cuenta`.
+4. En Supabase, comprobá el usuario en `Authentication > Users`.
+5. En `Table Editor > user_profiles`, comprobá que el trigger creó su perfil.
 
 No hace falta ejecutar ningún comando de base de datos desde Railway. Las tablas ya quedaron instaladas desde SQL Editor.

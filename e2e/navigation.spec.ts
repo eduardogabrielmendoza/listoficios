@@ -9,7 +9,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function backendReady(page: import("@playwright/test").Page) {
-  return (await page.request.get("/api/health")).ok();
+  const response = await page.request.get("/api/health?dependencies=1");
+  const payload = await response.json().catch(() => null);
+  return response.ok() && payload?.data?.database === "supabase_data_api";
 }
 
 async function register(page: import("@playwright/test").Page, suffix: string) {

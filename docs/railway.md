@@ -59,4 +59,10 @@ En Railway, eliminá manualmente cualquier `Pre-deploy Command` que hayas agrega
 6. Abrí `https://listoficios.up.railway.app/api/health`.
 7. Probá registro, ingreso, publicación y galería.
 
-Si falla `/api/health`, verificá los nombres exactos de las tres variables de Supabase y que el SQL haya terminado sin errores. Un valor que comienza con `https://` corresponde a `NEXT_PUBLIC_SUPABASE_URL`, nunca a `DATABASE_URL`.
+`/api/health` es una comprobación de vida de Next.js y siempre responde `200` cuando el contenedor está listo. Para comprobar también Supabase, abrí:
+
+```text
+https://listoficios.up.railway.app/api/health?dependencies=1
+```
+
+Si allí aparece `database: "unavailable"` o `database: "not_configured"`, verificá los nombres exactos de las tres variables de Supabase y que el SQL haya terminado sin errores. Un valor que comienza con `https://` corresponde a `NEXT_PUBLIC_SUPABASE_URL`, nunca a `DATABASE_URL`.
