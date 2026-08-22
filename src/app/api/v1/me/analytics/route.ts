@@ -1,0 +1,2 @@
+import { professionalAnalytics } from "@/data/community";import { requireServerSession } from "@/lib/auth-server";import { apiData,apiError,requestId } from "@/lib/server/api-response";
+export async function GET(request:Request){const id=requestId(request);try{return apiData(await professionalAnalytics((await requireServerSession()).user.id),{requestId:id});}catch{return apiError("UNAUTHORIZED","Necesitás ingresar.",401,id);}}

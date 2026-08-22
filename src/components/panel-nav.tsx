@@ -1,0 +1,4 @@
+"use client";
+import Link from "next/link";import { usePathname } from "next/navigation";
+const items=[["/panel","Resumen"],["/panel/publicacion","Mi publicación"],["/panel/servicios","Servicios"],["/panel/galeria","Galería"],["/panel/opiniones","Opiniones"],["/panel/favoritos","Favoritos"],["/panel/contactos","Contactos"],["/panel/notificaciones","Avisos"],["/panel/cuenta","Cuenta"]] as const;
+export function PanelNav(){const pathname=usePathname();return <nav className="flex gap-2 overflow-x-auto rounded-[22px] border border-[var(--line)] bg-white p-2 lg:flex-col lg:self-start" aria-label="Mi panel">{items.map(([href,label])=><Link key={href} href={href} className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-medium ${pathname===href?"bg-[var(--ink)] text-white":"text-[var(--muted)] hover:bg-[var(--paper)]"}`}>{label}</Link>)}</nav>}
