@@ -1,34 +1,46 @@
 # Configuración de Supabase
 
-Listoficios usa Supabase exclusivamente como PostgreSQL. Las cuentas continúan en Better Auth; no habilites Supabase Auth ni crees tablas manualmente desde el editor visual.
+Listoficios usa Supabase Auth para cuentas y la Data API HTTPS para datos. No hace falta copiar una contraseña PostgreSQL, usar `DATABASE_URL`, configurar Auth Hooks ni crear un pooler.
 
-## Alta inicial
+## 1. Instalar las tablas
 
-1. Creá un proyecto gratuito y guardá la contraseña de la base.
-2. Abrí `SQL Editor` y ejecutá completo [`drizzle/0000_plain_nekra.sql`](../drizzle/0000_plain_nekra.sql). Hacelo una sola vez sobre una base vacía.
-3. Abrí `Connect`, elegí `Session pooler` y copiá la URI del puerto `5432`.
-4. Reemplazá `[YOUR-PASSWORD]` por la contraseña, conservando el usuario con el identificador del proyecto.
-5. Guardá esa URI como `DATABASE_URL` en Railway.
-6. Verificá la conexión ejecutando `npm run db:check`.
+1. Abrí tu proyecto de Supabase.
+2. Entrá en `SQL Editor` y elegí `New query`.
+3. Copiá completo [`supabase/setup.sql`](../supabase/setup.sql), pegalo y presioná `Run`.
+4. Al final debe aparecer una fila con `categories = 8`, `zones = 8` y `rls_tables = 18`.
 
-Formato orientativo:
+El instalador elimina y vuelve a crear solamente las tablas públicas de Listoficios. No elimina usuarios de `auth.users`, pero sí borra datos anteriores del marketplace. Ejecutalo una sola vez para esta migración; no lo vuelvas a ejecutar sobre datos reales.
 
-```text
-postgresql://postgres.PROJECT_REF:TU_PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?sslmode=require
-```
+## 2. Configurar el correo
 
-Si la contraseña contiene caracteres como `@`, `:`, `/`, `#` o `%`, codificala para URL antes de colocarla en la cadena.
+1. Abrí `Authentication > Providers > Email`.
+2. Dejá habilitado el acceso con email y contraseña.
+3. Para esta V1, desactivá `Confirm email`; todavía no configuramos un proveedor de correo.
+4. Abrí `Authentication > URL Configuration`.
+5. En `Site URL` colocá `https://listoficios.up.railway.app`.
+6. En `Redirect URLs` agregá:
+   - `https://listoficios.up.railway.app/**`
+   - `http://localhost:3000/**`
 
-## Datos iniciales
+Si cambia el dominio de Railway, actualizá estas dos entradas.
 
-El SQL ya crea las tablas, claves foráneas, índices, categorías y zonas. También activa RLS sin políticas públicas para impedir que la Data API de Supabase exponga el dominio. No crea usuarios ni contraseñas. Para sumar perfiles ficticios de desarrollo podés ejecutar, con `CONTACT_ENCRYPTION_KEY` configurada:
+## 3. Copiar las tres credenciales
 
-```bash
-npm run db:seed
-```
+Abrí `Project Settings > API Keys` y copiá:
 
-No ejecutes después `npm run db:migrate` sobre la base configurada manualmente: el SQL ya aplicó esa migración. Railway usa `npm run db:check` antes de desplegar. Las migraciones futuras se entregarán también como SQL incremental.
+- `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
+- clave `Publishable` con prefijo `sb_publishable_` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- clave `Secret` con prefijo `sb_secret_` → `SUPABASE_SECRET_KEY`
 
-## Seguridad
+La clave secreta omite RLS y solo debe existir en Railway y `.env.local`. Nunca le agregues `NEXT_PUBLIC_`, nunca la pegues en código y nunca la compartas en capturas. No uses la antigua clave JWT `service_role` si tu proyecto ya ofrece claves Secret.
 
-La aplicación accede a PostgreSQL únicamente desde el servidor. No expongas `DATABASE_URL` ni la contraseña en variables `NEXT_PUBLIC_*`. El acceso y la autorización se controlan en Better Auth, repositorios y Route Handlers.
+## 4. Comprobar
+
+Después de cargar las variables y desplegar:
+
+1. Visitá `/api/health`; debe responder `ok` para aplicación y Supabase.
+2. Creá una cuenta desde `/crear-cuenta`.
+3. En Supabase, comprobá el usuario en `Authentication > Users`.
+4. En `Table Editor > user_profiles`, comprobá que el trigger creó su perfil.
+
+No hace falta ejecutar ningún comando de base de datos desde Railway. Las tablas ya quedaron instaladas desde SQL Editor.

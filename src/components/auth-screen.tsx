@@ -50,7 +50,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   }
 
   return <main className="relative isolate overflow-hidden px-4 py-12 sm:px-6 sm:py-20"><AmbientGlow /><div className="mx-auto grid max-w-[980px] overflow-hidden rounded-[32px] border border-[var(--line)] bg-white shadow-[0_24px_80px_rgba(12,42,36,.10)] lg:grid-cols-[.9fr_1.1fr]">
-    <section className="hidden bg-[var(--ink)] p-12 text-white lg:flex lg:flex-col lg:justify-between"><div><span className="eyebrow !text-[#9de8d2]">Listoficios</span><h2 className="mt-5 text-4xl font-semibold leading-[1.05]">Todo lo que necesitás, cerca tuyo.</h2><p className="mt-5 text-base leading-7 text-[#c7d7d2]">Encontrá personas que trabajan en Bella Vista y hablá directamente por WhatsApp.</p></div><p className="text-xs leading-5 text-[#8ea59e]">Sesión segura · Contraseñas procesadas por Better Auth.</p></section>
+    <section className="hidden bg-[var(--ink)] p-12 text-white lg:flex lg:flex-col lg:justify-between"><div><span className="eyebrow !text-[#9de8d2]">Listoficios</span><h2 className="mt-5 text-4xl font-semibold leading-[1.05]">Todo lo que necesitás, cerca tuyo.</h2><p className="mt-5 text-base leading-7 text-[#c7d7d2]">Encontrá personas que trabajan en Bella Vista y hablá directamente por WhatsApp.</p></div><p className="text-xs leading-5 text-[#8ea59e]">Sesión segura · Acceso administrado por Supabase Auth.</p></section>
     <section className="p-6 sm:p-10 lg:p-12"><span className="eyebrow">Acceso simple</span><h1 className="mt-3 text-3xl font-semibold text-[var(--ink)]">{copy[0]}</h1><p className="mt-3 text-sm leading-6 text-[var(--muted)]">{copy[1]}</p>
       <form onSubmit={submit} className="mt-8 grid gap-4">
         {!isLogin && <label className="field-label">Nombre y apellido<input className="field-input" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required /></label>}
@@ -63,7 +63,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
         <button disabled={busy} className="primary-button mt-2 w-full disabled:opacity-60">{busy ? "Procesando…" : copy[2]}</button>
       </form>
       <p className="mt-6 text-center text-sm text-[var(--muted)]">{isLogin ? <>¿No tenés cuenta? <Link className="font-semibold text-[var(--ink)]" href="/crear-cuenta">Creala gratis</Link></> : <>¿Ya tenés cuenta? <Link className="font-semibold text-[var(--ink)]" href="/ingresar">Ingresá</Link></>}</p>
-      <p className="mt-5 text-center text-[11px] leading-5 text-[#87938f]">Las sesiones reales requieren PostgreSQL y las variables documentadas en <code>.env.example</code>.</p>
+      <p className="mt-5 text-center text-[11px] leading-5 text-[#87938f]">Las sesiones se administran de forma segura mediante Supabase Auth.</p>
     </section>
   </div></main>;
 }

@@ -1,64 +1,37 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin } from "better-auth/plugins";
-import { nextCookies } from "better-auth/next-js";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getDb } from "@/db";
-import { schema } from "@/db/schema";
 import { adminEmails } from "@/lib/server/env";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { supabaseIsConfigured } from "@/lib/supabase/config";
 
-const buildSecret = "listoficios-build-only-secret-change-in-railway";
-const baseURL = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-
-export const auth = betterAuth({
-  appName: "Listoficios",
-  baseURL,
-  secret: process.env.BETTER_AUTH_SECRET ?? buildSecret,
-  database: drizzleAdapter(getDb(), { provider: "pg", schema }),
-  emailAndPassword: {
-    enabled: true,
-    minPasswordLength: 8,
-    maxPasswordLength: 128,
-    requireEmailVerification: false,
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 30,
-    updateAge: 60 * 60 * 24,
-    cookieCache: { enabled: true, maxAge: 60 * 5 },
-  },
-  rateLimit: {
-    enabled: true,
-    window: 60,
-    max: 100,
-    customRules: {
-      "/sign-in/email": { window: 60, max: 6 },
-      "/sign-up/email": { window: 300, max: 4 },
-    },
-  },
-  trustedOrigins: [baseURL],
-  databaseHooks: {
-    user: {
-      create: {
-        before: async (newUser) => ({
-          data: {
-            ...newUser,
-            role: adminEmails().includes(newUser.email.toLowerCase()) ? "admin" : "user",
-          },
-        }),
-      },
-    },
-  },
-  plugins: [admin({ defaultRole: "user", adminRoles: ["admin"] }), nextCookies()],
-});
+export type ServerSession = {
+  user: { id: string; email: string; name: string; role: "user" | "admin" };
+};
 
 export function authIsConfigured() {
-  return Boolean(process.env.DATABASE_URL && process.env.BETTER_AUTH_SECRET && (process.env.BETTER_AUTH_URL || process.env.APP_URL));
+  return supabaseIsConfigured();
 }
 
-export async function getServerSession() {
+export async function getServerSession(): Promise<ServerSession | null> {
   if (!authIsConfigured()) return null;
-  return auth.api.getSession({ headers: await headers() });
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user?.email) return null;
+  const email = data.user.email.toLowerCase();
+  const { data: profile, error: profileError } = await createAdminClient()
+    .from("user_profiles")
+    .select("name, banned")
+    .eq("id", data.user.id)
+    .maybeSingle();
+  if (profileError || profile?.banned) return null;
+  return {
+    user: {
+      id: data.user.id,
+      email,
+      name: String(profile?.name ?? data.user.user_metadata?.name ?? email.split("@")[0]),
+      role: adminEmails().includes(email) ? "admin" : "user",
+    },
+  };
 }
 
 export async function requireServerSession() {
@@ -73,8 +46,8 @@ export async function requireAdminSession() {
   return current;
 }
 
-export async function requirePageSession(next="/panel") {
-  const current=await getServerSession();
-  if(!current)redirect(`/ingresar?next=${encodeURIComponent(next)}`);
+export async function requirePageSession(next = "/panel") {
+  const current = await getServerSession();
+  if (!current) redirect(`/ingresar?next=${encodeURIComponent(next)}`);
   return current;
 }

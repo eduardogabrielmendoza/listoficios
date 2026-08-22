@@ -1,18 +1,9 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
-import { getDb, hasDatabase } from "@/db";
-import {
-  categories,
-  portfolioItems,
-  professionalProfiles,
-  profileZones,
-  reviews,
-  serviceCategories,
-  services,
-  zones,
-} from "@/db/schema";
 import type { PricingMode, ServiceProfile } from "@/lib/app-types";
 import type { PublicProfessionalProfile, ServiceListing } from "@/lib/api-contracts";
 import { findProfessional, professionals as mockProfessionals, searchProfessionals } from "@/lib/mock-data";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { supabaseIsConfigured } from "@/lib/supabase/config";
+import type { ProfileGraph } from "@/lib/supabase/rows";
 
 export type DirectoryFilters = {
   query?: string;
@@ -25,21 +16,13 @@ export type DirectoryFilters = {
 };
 
 const tones = new Set(["forest", "ocean", "sunset", "plum"]);
-
-function encodeCursor(updated: Date, id: string) {
-  return Buffer.from(`${updated.toISOString()}|${id}`).toString("base64url");
-}
-
-function decodeCursor(cursor?: string) {
-  if (!cursor) return null;
-  try {
-    const [date, id] = Buffer.from(cursor, "base64url").toString("utf8").split("|");
-    const updated = new Date(date);
-    return id && !Number.isNaN(updated.getTime()) ? { updated, id } : null;
-  } catch {
-    return null;
-  }
-}
+const graphSelect = `
+  *,
+  services(*, service_categories(category_id, categories(name))),
+  profile_zones(zone_id, zones(name)),
+  reviews(rating, status),
+  portfolio_items(*)
+`;
 
 function mockResult(filters: DirectoryFilters) {
   const data = searchProfessionals({
@@ -52,120 +35,102 @@ function mockResult(filters: DirectoryFilters) {
   return { data, nextCursor: null, total: data.length, source: "seed-preview" as const };
 }
 
-export async function listProfessionals(filters: DirectoryFilters = {}) {
-  if (!hasDatabase()) return mockResult(filters);
-  const db = getDb();
-  const limit = Math.min(Math.max(filters.limit ?? 12, 1), 30);
-  const cursor = decodeCursor(filters.cursor);
-  const query = filters.query?.trim().toLowerCase();
-  const conditions = [eq(professionalProfiles.status, "published")];
-  if (query) conditions.push(sql<boolean>`(
-    lower(${professionalProfiles.displayName}) like ${`%${query}%`}
-    or lower(${professionalProfiles.headline}) like ${`%${query}%`}
-    or lower(${professionalProfiles.bio}) like ${`%${query}%`}
-    or exists (select 1 from ${services} s where s.profile_id = ${professionalProfiles.id} and (lower(s.title) like ${`%${query}%`} or lower(s.description) like ${`%${query}%`} or lower(coalesce(s.custom_service, '')) like ${`%${query}%`}))
-  )`);
-  if (filters.category) conditions.push(sql<boolean>`exists (
-    select 1 from ${services} s join ${serviceCategories} sc on sc.service_id = s.id
-    where s.profile_id = ${professionalProfiles.id} and sc.category_id = ${filters.category}
-  )`);
-  if (filters.zone) conditions.push(sql<boolean>`exists (
-    select 1 from ${profileZones} pz join ${zones} z on z.id = pz.zone_id
-    where pz.profile_id = ${professionalProfiles.id} and (z.id = ${filters.zone} or z.name = ${filters.zone})
-  )`);
-  if (filters.pricing) conditions.push(sql<boolean>`exists (
-    select 1 from ${services} s where s.profile_id = ${professionalProfiles.id} and s.pricing_mode = ${filters.pricing}
-  )`);
-  if (cursor) conditions.push(sql<boolean>`(${professionalProfiles.updatedAt}, ${professionalProfiles.id}) < (${cursor.updated}, ${cursor.id}::uuid)`);
-
-  const priceOrder = sql<number>`coalesce((select min(s.price_amount) from ${services} s where s.profile_id = ${professionalProfiles.id} and s.price_amount is not null), 2147483647)`;
-  const ratingOrder = sql<number>`coalesce((select avg(r.rating) from ${reviews} r where r.profile_id = ${professionalProfiles.id} and r.status = 'published'), 0)`;
-  const ordering = filters.sort === "price"
-    ? [asc(priceOrder), desc(professionalProfiles.updatedAt), desc(professionalProfiles.id)]
-    : filters.sort === "rating"
-      ? [desc(ratingOrder), desc(professionalProfiles.updatedAt), desc(professionalProfiles.id)]
-      : [desc(professionalProfiles.updatedAt), desc(professionalProfiles.id)];
-
-  const rows = await db.select().from(professionalProfiles)
-    .where(and(...conditions))
-    .orderBy(...ordering)
-    .limit(limit + 1);
-  const page = rows.slice(0, limit);
-  const hydrated = await hydrateProfiles(page);
-  const totalRows = await db.select({ count: sql<number>`count(*)::int` }).from(professionalProfiles).where(and(...conditions.filter((_, index) => index !== conditions.length - 1 || !cursor)));
-  const last = page.at(-1);
+function serviceProfile(profile: ProfileGraph): ServiceProfile {
+  const activeServices = profile.services.filter((service) => service.published);
+  const first = activeServices[0];
+  const categories = [...new Set(activeServices.flatMap((service) => service.service_categories.map((entry) => entry.category_id)))];
+  const categoryNames = activeServices.flatMap((service) => service.service_categories.flatMap((entry) => entry.categories?.name ? [entry.categories.name] : []));
+  const reviews = profile.reviews.filter((review) => review.status === "published");
+  const rating = reviews.length ? reviews.reduce((total, review) => total + review.rating, 0) / reviews.length : 0;
+  const initials = profile.display_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return {
-    data: hydrated,
-    nextCursor: rows.length > limit && last ? encodeCursor(last.updatedAt, last.id) : null,
-    total: totalRows[0]?.count ?? hydrated.length,
-    source: "database" as const,
+    id: profile.id,
+    slug: profile.slug,
+    name: profile.display_name,
+    initials,
+    trade: profile.headline,
+    categoryId: categories[0] ?? "otro",
+    categories,
+    customService: first?.custom_service ?? "",
+    description: profile.bio,
+    experienceYears: profile.experience_years,
+    zones: profile.profile_zones.flatMap((entry) => entry.zones?.name ? [entry.zones.name] : []),
+    serviceMode: profile.service_mode,
+    pricingMode: first?.pricing_mode ?? "quote",
+    priceAmount: first?.price_amount ?? null,
+    generalAvailability: ["coordinate"],
+    whatsapp: "",
+    phonePreview: profile.phone_preview ?? "Número protegido",
+    rating,
+    reviews: reviews.length,
+    responseTime: "Contacto directo por WhatsApp",
+    skills: [...new Set([...activeServices.map((service) => service.title), ...categoryNames])],
+    avatarTone: tones.has(profile.accent_color) ? profile.accent_color as ServiceProfile["avatarTone"] : "forest",
+    featured: profile.views_count > 10,
+    isDemo: profile.is_demo,
   };
 }
 
-async function hydrateProfiles(profileRows: (typeof professionalProfiles.$inferSelect)[]): Promise<ServiceProfile[]> {
-  if (!profileRows.length) return [];
-  const db = getDb();
-  const ids = profileRows.map((profile) => profile.id);
-  const [serviceRows, zoneRows, reviewRows] = await Promise.all([
-    db.select({ service: services, categoryId: serviceCategories.categoryId, categoryName: categories.name })
-      .from(services)
-      .leftJoin(serviceCategories, eq(serviceCategories.serviceId, services.id))
-      .leftJoin(categories, eq(categories.id, serviceCategories.categoryId))
-      .where(and(inArray(services.profileId, ids), eq(services.published, true))),
-    db.select({ profileId: profileZones.profileId, zoneName: zones.name })
-      .from(profileZones).innerJoin(zones, eq(zones.id, profileZones.zoneId)).where(inArray(profileZones.profileId, ids)),
-    db.select({ profileId: reviews.profileId, rating: sql<number>`coalesce(avg(${reviews.rating}), 0)::float`, count: sql<number>`count(*)::int` })
-      .from(reviews).where(and(inArray(reviews.profileId, ids), eq(reviews.status, "published"))).groupBy(reviews.profileId),
-  ]);
+async function publishedGraphs() {
+  const { data, error } = await createAdminClient()
+    .from("professional_profiles")
+    .select(graphSelect)
+    .eq("status", "published")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as ProfileGraph[];
+}
 
-  return profileRows.map((profile) => {
-    const profileServices = serviceRows.filter((row) => row.service.profileId === profile.id);
-    const first = profileServices[0]?.service;
-    const categoryIds = [...new Set(profileServices.flatMap((row) => row.categoryId ? [row.categoryId] : []))];
-    const skills = [...new Set(profileServices.flatMap((row) => [row.service.title, ...(row.categoryName ? [row.categoryName] : [])]))];
-    const score = reviewRows.find((row) => row.profileId === profile.id);
-    const initials = profile.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-    const tone = tones.has(profile.accentColor) ? profile.accentColor as ServiceProfile["avatarTone"] : "forest";
-    return {
-      id: profile.id,
-      slug: profile.slug,
-      name: profile.displayName,
-      initials,
-      trade: profile.headline,
-      categoryId: categoryIds[0] ?? "otro",
-      categories: categoryIds,
-      customService: first?.customService ?? "",
-      description: profile.bio,
-      experienceYears: profile.experienceYears,
-      zones: zoneRows.filter((row) => row.profileId === profile.id).map((row) => row.zoneName),
-      serviceMode: profile.serviceMode,
-      pricingMode: first?.pricingMode ?? "quote",
-      priceAmount: first?.priceAmount ?? null,
-      generalAvailability: ["coordinate"],
-      whatsapp: "",
-      phonePreview: profile.phonePreview ?? "Número protegido",
-      rating: score?.rating ?? 0,
-      reviews: score?.count ?? 0,
-      responseTime: "Contacto directo por WhatsApp",
-      skills,
-      avatarTone: tone,
-      featured: profile.viewsCount > 10,
-      isDemo: profile.isDemo,
-    };
+function applyFilters(entries: ServiceProfile[], filters: DirectoryFilters) {
+  const query = filters.query?.trim().toLocaleLowerCase("es-AR") ?? "";
+  const filtered = entries.filter((profile) => {
+    const text = [profile.name, profile.trade, profile.customService, profile.description, ...profile.skills, ...profile.zones].join(" ").toLocaleLowerCase("es-AR");
+    return (!query || text.includes(query))
+      && (!filters.category || profile.categories.includes(filters.category))
+      && (!filters.zone || profile.zones.includes(filters.zone))
+      && (!filters.pricing || profile.pricingMode === filters.pricing);
   });
+  if (filters.sort === "rating") filtered.sort((a, b) => b.rating - a.rating);
+  else if (filters.sort === "price") filtered.sort((a, b) => (a.priceAmount ?? Number.MAX_SAFE_INTEGER) - (b.priceAmount ?? Number.MAX_SAFE_INTEGER));
+  else filtered.sort((a, b) => Number(b.featured) - Number(a.featured));
+  return filtered;
+}
+
+export async function listProfessionals(filters: DirectoryFilters = {}) {
+  if (!supabaseIsConfigured()) return mockResult(filters);
+  try {
+    const all = applyFilters((await publishedGraphs()).map(serviceProfile), filters);
+    const offset = filters.cursor ? Number(Buffer.from(filters.cursor, "base64url").toString("utf8")) || 0 : 0;
+    const limit = Math.min(Math.max(filters.limit ?? 12, 1), 30);
+    const data = all.slice(offset, offset + limit);
+    const nextOffset = offset + data.length;
+    return {
+      data,
+      nextCursor: nextOffset < all.length ? Buffer.from(String(nextOffset)).toString("base64url") : null,
+      total: all.length,
+      source: "database" as const,
+    };
+  } catch {
+    return mockResult(filters);
+  }
 }
 
 export async function getProfessionalBySlug(slug: string) {
-  if (!hasDatabase()) return findProfessional(slug) ?? null;
-  const db = getDb();
-  const rows = await db.select().from(professionalProfiles).where(and(eq(professionalProfiles.slug, slug), eq(professionalProfiles.status, "published"))).limit(1);
-  return (await hydrateProfiles(rows))[0] ?? null;
+  if (!supabaseIsConfigured()) return findProfessional(slug) ?? null;
+  const { data, error } = await createAdminClient()
+    .from("professional_profiles")
+    .select(graphSelect)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? serviceProfile(data as unknown as ProfileGraph) : null;
 }
 
 export async function getPublicProfile(slug: string): Promise<PublicProfessionalProfile | null> {
-  const card = await getProfessionalBySlug(slug);
-  if (!card) return null;
-  if (!hasDatabase()) {
+  if (!supabaseIsConfigured()) {
+    const card = findProfessional(slug);
+    if (!card) return null;
     return {
       id: card.id, slug: card.slug, displayName: card.name, headline: card.trade, bio: card.description,
       experienceYears: card.experienceYears, zones: card.zones, serviceMode: card.serviceMode,
@@ -173,17 +138,33 @@ export async function getPublicProfile(slug: string): Promise<PublicProfessional
       isDemo: card.isDemo, portfolio: [], services: [{ id: `${card.id}-service`, slug: card.customService ? card.customService.toLowerCase().replace(/\s+/g, "-") : card.categoryId, title: card.customService || card.trade, description: card.description, categories: card.categories, customService: card.customService || null, pricingMode: card.pricingMode, priceAmount: card.priceAmount }],
     };
   }
-  const db = getDb();
-  const [serviceRows,portfolioRows] = await Promise.all([db.select().from(services).where(and(eq(services.profileId, card.id), eq(services.published, true))),db.select().from(portfolioItems).where(eq(portfolioItems.profileId,card.id)).orderBy(portfolioItems.sortOrder)]);
-  const listings: ServiceListing[] = await Promise.all(serviceRows.map(async (service) => {
-    const cats = await db.select({ id: serviceCategories.categoryId }).from(serviceCategories).where(eq(serviceCategories.serviceId, service.id));
-    return { id: service.id, slug: service.slug, title: service.title, description: service.description, categories: cats.map((entry) => entry.id), customService: service.customService, pricingMode: service.pricingMode, priceAmount: service.priceAmount };
+  const { data, error } = await createAdminClient()
+    .from("professional_profiles")
+    .select(graphSelect)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const graph = data as unknown as ProfileGraph;
+  const card = serviceProfile(graph);
+  const listings: ServiceListing[] = graph.services.filter((service) => service.published).map((service) => ({
+    id: service.id,
+    slug: service.slug,
+    title: service.title,
+    description: service.description,
+    categories: service.service_categories.map((entry) => entry.category_id),
+    customService: service.custom_service,
+    pricingMode: service.pricing_mode,
+    priceAmount: service.price_amount,
   }));
   return {
     id: card.id, slug: card.slug, displayName: card.name, headline: card.trade, bio: card.description,
     experienceYears: card.experienceYears, zones: card.zones, serviceMode: card.serviceMode,
     phonePreview: card.phonePreview, accentColor: card.avatarTone, rating: card.rating || null, reviewCount: card.reviews,
-    isDemo: card.isDemo, portfolio: portfolioRows.map((item)=>({id:item.id,url:`/media/${item.id}`,alt:item.alt,width:item.width,height:item.height})), services: listings,
+    isDemo: card.isDemo,
+    portfolio: graph.portfolio_items.sort((a, b) => a.sort_order - b.sort_order).map((item) => ({ id: item.id, url: `/media/${item.id}`, alt: item.alt, width: item.width, height: item.height })),
+    services: listings,
   };
 }
 
@@ -194,7 +175,20 @@ export async function getServiceBySlug(profileSlug: string, serviceSlug: string)
   return service ? { profile, service } : null;
 }
 
-export async function getServiceByListingSlug(serviceSlug:string){if(!hasDatabase()){for(const professional of mockProfessionals){const profile=await getPublicProfile(professional.slug);const service=profile?.services.find((entry)=>entry.slug===serviceSlug);if(profile&&service)return{profile,service};}return null;}const db=getDb();const rows=await db.select({serviceSlug:services.slug,profileSlug:professionalProfiles.slug}).from(services).innerJoin(professionalProfiles,eq(professionalProfiles.id,services.profileId)).where(and(eq(services.slug,serviceSlug),eq(services.published,true),eq(professionalProfiles.status,"published"))).limit(1);return rows[0]?getServiceBySlug(rows[0].profileSlug,rows[0].serviceSlug):null;}
+export async function getServiceByListingSlug(serviceSlug: string) {
+  if (!supabaseIsConfigured()) {
+    for (const professional of mockProfessionals) {
+      const profile = await getPublicProfile(professional.slug);
+      const service = profile?.services.find((entry) => entry.slug === serviceSlug);
+      if (profile && service) return { profile, service };
+    }
+    return null;
+  }
+  const { data, error } = await createAdminClient().from("services").select("slug, professional_profiles!inner(slug, status)").eq("slug", serviceSlug).eq("published", true).eq("professional_profiles.status", "published").limit(1).maybeSingle();
+  if (error || !data) return null;
+  const joined = data.professional_profiles as unknown as { slug: string };
+  return getServiceBySlug(joined.slug, data.slug);
+}
 
 export function allMockProfessionals() {
   return mockProfessionals;

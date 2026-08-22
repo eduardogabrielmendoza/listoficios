@@ -1,17 +1,20 @@
 # Arquitectura
 
-Las páginas renderizadas en servidor consultan `src/data` directamente. Los Route Handlers de `src/app/api/v1` atienden interacciones del navegador; el servidor no hace solicitudes HTTP contra sí mismo.
+Railway ejecuta únicamente la aplicación Next.js. Supabase ofrece cuentas y persistencia mediante Auth y Data API por HTTPS; Cloudinary almacena las imágenes. No hay conexión PostgreSQL directa, Drizzle, Better Auth, comandos de migración ni servicio Postgres en Railway.
 
-Supabase se usa como PostgreSQL administrado, no como sistema de autenticación. Better Auth administra las tablas `user`, `session`, `account` y `verification`; Drizzle define el marketplace y sus migraciones. Los perfiles demo opcionales se cargan con `npm run db:seed`, no tienen propietario y están marcados con `is_demo`.
+Las páginas renderizadas en servidor consultan `src/data` directamente. Los Route Handlers de `src/app/api/v1` atienden interacciones del navegador. Ambos usan un cliente Supabase exclusivo del servidor con `SUPABASE_SECRET_KEY`; esta clave nunca llega al navegador.
 
-Cloudinary almacena la galería. El navegador nunca recibe las credenciales: las cargas pasan por la API de Listoficios, Sharp valida el contenido, elimina metadatos, limita dimensiones y genera WebP. PostgreSQL conserva el `public_id` de Cloudinary y las rutas públicas de Listoficios resuelven la URL de entrega.
+La sesión del navegador utiliza el cliente público de Supabase y cookies renovadas por `src/proxy.ts`. Cada mutación vuelve a comprobar sesión, rol y propiedad en el servidor. RLS permanece activo y sin políticas públicas sobre las tablas de dominio, por lo que las claves públicas no pueden leerlas directamente.
+
+Cloudinary recibe únicamente archivos que pasaron por la API de Listoficios. Sharp verifica el contenido, elimina metadatos, limita dimensiones y genera WebP. Supabase conserva el `public_id` y las rutas de Listoficios resuelven la entrega.
 
 Adaptadores principales:
 
-- `src/db`: conexión, esquema, migración y seed.
+- `src/lib/supabase`: clientes de navegador, servidor, administración y renovación de sesión.
+- `src/data`: consultas del marketplace y autorización de dominio.
 - `src/lib/server/storage.ts`: carga, entrega y eliminación en Cloudinary.
 - `src/lib/server/crypto.ts`: cifrado de teléfonos y hashes no reversibles.
 - `src/lib/server/rate-limit.ts`: límites persistentes con fallback de desarrollo.
 - `src/lib/server/api-response.ts`: contratos y logs estructurados.
 
-La PWA solo cachea archivos estáticos versionados. No cachea HTML, APIs, panel, cuentas ni respuestas privadas.
+El esquema se instala manualmente desde [`supabase/setup.sql`](../supabase/setup.sql). Los cambios futuros deberán agregarse como archivos SQL incrementales, sin volver a ejecutar el instalador destructivo sobre producción.

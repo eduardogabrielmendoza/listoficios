@@ -1,12 +1,120 @@
-import { and, desc, eq, gte, sql } from "drizzle-orm";
-import { getDb } from "@/db";
-import { contactEvents, notifications, professionalProfiles, profileDailyStats, reports, reviewReplies, reviews, supportTickets } from "@/db/schema";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { NotificationRow, ReviewRow } from "@/lib/supabase/rows";
 
-export async function saveReview(userId:string,input:{id?:string;profileId:string;rating:number;title:string;body:string}){const db=getDb();const contact=await db.select({id:contactEvents.id}).from(contactEvents).where(and(eq(contactEvents.userId,userId),eq(contactEvents.profileId,input.profileId))).limit(1);if(!contact.length)throw new Error("CONTACT_REQUIRED");const profile=await db.select({userId:professionalProfiles.userId}).from(professionalProfiles).where(eq(professionalProfiles.id,input.profileId)).limit(1);if(!profile.length||profile[0].userId===userId)throw new Error("NOT_ALLOWED");const existing=await db.select().from(reviews).where(and(eq(reviews.userId,userId),eq(reviews.profileId,input.profileId))).limit(1);const values={rating:input.rating,title:input.title,body:input.body,status:"pending" as const,moderationNote:null,updatedAt:new Date()};const review=existing[0]?(await db.update(reviews).set(values).where(eq(reviews.id,existing[0].id)).returning())[0]:(await db.insert(reviews).values({...values,userId,profileId:input.profileId}).returning())[0];if(profile[0].userId)await db.insert(notifications).values({userId:profile[0].userId,kind:"review",title:"Recibiste una nueva opinión",body:"La opinión está pendiente de moderación.",href:"/panel/opiniones"});return review;}
-export async function replyToReview(userId:string,reviewId:string,body:string){const db=getDb();const rows=await db.select({review:reviews,profileId:professionalProfiles.id}).from(reviews).innerJoin(professionalProfiles,eq(professionalProfiles.id,reviews.profileId)).where(and(eq(reviews.id,reviewId),eq(professionalProfiles.userId,userId))).limit(1);if(!rows.length)throw new Error("NOT_FOUND");const [reply]=await db.insert(reviewReplies).values({reviewId,profileId:rows[0].profileId,body}).onConflictDoUpdate({target:reviewReplies.reviewId,set:{body,updatedAt:new Date()}}).returning();return reply;}
-export async function createReport(input:{reporterUserId?:string;targetType:"profile"|"service"|"review";targetId:string;reason:string;description:string;visitorHash:string}){const [report]=await getDb().insert(reports).values(input).returning();return{number:`REP-${report.id.slice(0,8).toUpperCase()}`,status:report.status};}
-export async function createSupport(input:{userId?:string;name:string;email:string;userType:string;topic:string;message:string}){const number=`LF-${new Date().getFullYear()}-${crypto.randomUUID().slice(0,6).toUpperCase()}`;const [ticket]=await getDb().insert(supportTickets).values({...input,number}).returning();return{number:ticket.number,status:ticket.status,createdAt:ticket.createdAt};}
-export async function listNotifications(userId:string){return getDb().select().from(notifications).where(eq(notifications.userId,userId)).orderBy(desc(notifications.createdAt)).limit(50);}
-export async function markNotifications(userId:string,read:boolean){await getDb().update(notifications).set({readAt:read?new Date():null}).where(eq(notifications.userId,userId));return{updated:true};}
-export async function recordProfileView(profileId:string){const db=getDb();const day=new Date().toISOString().slice(0,10);await db.insert(profileDailyStats).values({profileId,day,views:1}).onConflictDoUpdate({target:[profileDailyStats.profileId,profileDailyStats.day],set:{views:sql`${profileDailyStats.views}+1`}});await db.update(professionalProfiles).set({viewsCount:sql`${professionalProfiles.viewsCount}+1`}).where(eq(professionalProfiles.id,profileId));}
-export async function professionalAnalytics(userId:string){const db=getDb();const profiles=await db.select({id:professionalProfiles.id}).from(professionalProfiles).where(eq(professionalProfiles.userId,userId)).limit(1);if(!profiles.length)return[];const since=new Date();since.setDate(since.getDate()-30);const stats=await db.select().from(profileDailyStats).where(and(eq(profileDailyStats.profileId,profiles[0].id),gte(profileDailyStats.day,since.toISOString().slice(0,10)))).orderBy(profileDailyStats.day);return stats;}
+export async function saveReview(userId: string, input: { id?: string; profileId: string; rating: number; title: string; body: string }) {
+  const supabase = createAdminClient();
+  const [contact, profileResult] = await Promise.all([
+    supabase.from("contact_events").select("id").eq("user_id", userId).eq("profile_id", input.profileId).limit(1),
+    supabase.from("professional_profiles").select("user_id").eq("id", input.profileId).maybeSingle(),
+  ]);
+  if (contact.error || !contact.data?.length) throw new Error("CONTACT_REQUIRED");
+  if (profileResult.error || !profileResult.data || profileResult.data.user_id === userId) throw new Error("NOT_ALLOWED");
+  const now = new Date().toISOString();
+  const { data, error } = await supabase.from("reviews").upsert({
+    user_id: userId,
+    profile_id: input.profileId,
+    rating: input.rating,
+    title: input.title,
+    body: input.body,
+    status: "pending",
+    moderation_note: null,
+    updated_at: now,
+  }, { onConflict: "user_id,profile_id" }).select().single();
+  if (error) throw error;
+  if (profileResult.data.user_id) {
+    const notification = await supabase.from("notifications").insert({
+      user_id: profileResult.data.user_id,
+      kind: "review",
+      title: "Recibiste una nueva opinión",
+      body: "La opinión está pendiente de moderación.",
+      href: "/panel/opiniones",
+    });
+    if (notification.error) throw notification.error;
+  }
+  return data as unknown as ReviewRow;
+}
+
+export async function replyToReview(userId: string, reviewId: string, body: string) {
+  const supabase = createAdminClient();
+  const { data: review, error } = await supabase
+    .from("reviews")
+    .select("id, profile_id, professional_profiles!inner(user_id)")
+    .eq("id", reviewId)
+    .eq("professional_profiles.user_id", userId)
+    .maybeSingle();
+  if (error || !review) throw new Error("NOT_FOUND");
+  const result = await supabase.from("review_replies").upsert({
+    review_id: reviewId,
+    profile_id: review.profile_id,
+    body,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "review_id" }).select().single();
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+export async function createReport(input: { reporterUserId?: string; targetType: "profile" | "service" | "review"; targetId: string; reason: string; description: string; visitorHash: string }) {
+  const { data, error } = await createAdminClient().from("reports").insert({
+    reporter_user_id: input.reporterUserId ?? null,
+    target_type: input.targetType,
+    target_id: input.targetId,
+    reason: input.reason,
+    description: input.description,
+    visitor_hash: input.visitorHash,
+  }).select("id, status").single();
+  if (error) throw error;
+  return { number: `REP-${data.id.slice(0, 8).toUpperCase()}`, status: data.status };
+}
+
+export async function createSupport(input: { userId?: string; name: string; email: string; userType: string; topic: string; message: string }) {
+  const number = `LF-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+  const { data, error } = await createAdminClient().from("support_tickets").insert({
+    number,
+    user_id: input.userId ?? null,
+    name: input.name,
+    email: input.email,
+    user_type: input.userType,
+    topic: input.topic,
+    message: input.message,
+  }).select("number, status, created_at").single();
+  if (error) throw error;
+  return { number: data.number, status: data.status, createdAt: new Date(data.created_at) };
+}
+
+export async function listNotifications(userId: string) {
+  const { data, error } = await createAdminClient().from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50);
+  if (error) throw error;
+  return ((data ?? []) as unknown as NotificationRow[]).map((item) => ({
+    id: item.id,
+    userId: item.user_id,
+    kind: item.kind,
+    title: item.title,
+    body: item.body,
+    href: item.href,
+    readAt: item.read_at ? new Date(item.read_at) : null,
+    createdAt: new Date(item.created_at),
+  }));
+}
+
+export async function markNotifications(userId: string, read: boolean) {
+  const { error } = await createAdminClient().from("notifications").update({ read_at: read ? new Date().toISOString() : null }).eq("user_id", userId);
+  if (error) throw error;
+  return { updated: true };
+}
+
+export async function recordProfileView(profileId: string) {
+  const { error } = await createAdminClient().rpc("increment_profile_view", { p_profile_id: profileId });
+  if (error) throw error;
+}
+
+export async function professionalAnalytics(userId: string) {
+  const supabase = createAdminClient();
+  const profile = await supabase.from("professional_profiles").select("id").eq("user_id", userId).maybeSingle();
+  if (profile.error) throw profile.error;
+  if (!profile.data) return [];
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const { data, error } = await supabase.from("profile_daily_stats").select("*").eq("profile_id", profile.data.id).gte("day", since.toISOString().slice(0, 10)).order("day");
+  if (error) throw error;
+  return (data ?? []).map((entry) => ({ profileId: entry.profile_id, day: entry.day, views: entry.views, contacts: entry.contacts, favorites: entry.favorites }));
+}

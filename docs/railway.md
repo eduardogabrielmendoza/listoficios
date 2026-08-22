@@ -1,58 +1,62 @@
 # Despliegue en Railway con Supabase y Cloudinary
 
-Railway alojará solamente la aplicación Next.js. PostgreSQL vivirá en Supabase y las imágenes en Cloudinary; no hace falta crear un servicio Postgres ni un Bucket dentro de Railway.
+Railway alojará únicamente Next.js. Supabase administrará cuentas y datos por HTTPS, y Cloudinary guardará las imágenes. No crees servicios Postgres ni Buckets en Railway.
 
-## 1. Preparar servicios externos
+## 1. Antes de desplegar
 
-1. Creá el proyecto gratuito de Supabase y seguí [la configuración SQL](supabase.md).
-2. Creá una cuenta de Cloudinary.
-3. En la consola de Cloudinary copiá `Cloud name`, `API key` y `API secret`.
-4. Conservá todas estas credenciales fuera del repositorio.
+1. Ejecutá [`supabase/setup.sql`](../supabase/setup.sql) siguiendo [la guía de Supabase](supabase.md).
+2. Creá o configurá Cloudinary y copiá `Cloud name`, `API key` y `API secret`.
+3. Rotá cualquier secreto que haya aparecido en una captura o mensaje público.
 
-## 2. Variables de Railway
+## 2. Variables del servicio web
 
-Configurá en el servicio web:
+En `Variables` del servicio de Listoficios cargá exactamente:
 
 ```text
-APP_URL=https://TU-DOMINIO.up.railway.app
-BETTER_AUTH_URL=https://TU-DOMINIO.up.railway.app
-BETTER_AUTH_SECRET=UN_SECRETO_ALEATORIO_DE_32_CARACTERES_O_MAS
-ADMIN_EMAILS=tu-correo@ejemplo.com
-DATABASE_URL=URI_SESSION_POOLER_DE_SUPABASE
+APP_URL=https://listoficios.up.railway.app
+ADMIN_EMAILS=tu-correo-real@ejemplo.com
+NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...
 CONTACT_ENCRYPTION_KEY=CLAVE_DE_32_BYTES_EN_BASE64
 CLOUDINARY_CLOUD_NAME=TU_CLOUD_NAME
 CLOUDINARY_API_KEY=TU_API_KEY
 CLOUDINARY_API_SECRET=TU_API_SECRET
 ```
 
-No agregues prefijo `NEXT_PUBLIC_` a secretos, base de datos ni credenciales de Cloudinary.
+Eliminá estas variables antiguas si todavía aparecen:
 
-Para crear valores seguros localmente:
+- `DATABASE_URL`
+- `BETTER_AUTH_URL`
+- `BETTER_AUTH_SECRET`
+
+Marcá como secretos `SUPABASE_SECRET_KEY`, `CONTACT_ENCRYPTION_KEY` y `CLOUDINARY_API_SECRET`. Las dos variables `NEXT_PUBLIC_SUPABASE_*` son públicas por diseño; la clave Publishable no concede acceso a las tablas protegidas por RLS.
+
+Para generar `CONTACT_ENCRYPTION_KEY` en tu terminal:
 
 ```bash
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
-Usá la salida hexadecimal para `BETTER_AUTH_SECRET` y la salida base64 para `CONTACT_ENCRYPTION_KEY`.
+## 3. Configuración de despliegue
 
-## 3. Corregir y desplegar
+El repositorio ya fija Node.js 22 y `railway.toml` define:
 
-El repositorio fija Node.js 22 mediante `package.json`, `.nvmrc` y `nixpacks.toml`. Esto corrige el error de Railway donde Nixpacks elegía Node 18.20.5 aunque Next.js 16 requiere Node 20.9 o superior.
+- build: `npm run build`
+- start: `npm run start`
+- healthcheck: `/api/health`
+- ningún comando de pre-deploy
 
-1. Conectá el repositorio de GitHub al servicio Railway.
-2. Confirmá que la rama desplegada sea `main`.
-3. Cargá todas las variables anteriores.
-4. En Supabase, ejecutá el SQL antes del primer despliegue.
-5. Lanzá un nuevo deployment. Si Railway conserva la imagen anterior, elegí `Redeploy` con limpieza de caché.
-6. Comprobá `/api/health` y luego registro, ingreso, publicación y carga de galería.
+En Railway, eliminá manualmente cualquier `Pre-deploy Command` que hayas agregado antes en `Settings > Deploy`. Debe quedar vacío; una configuración del panel puede tener prioridad sobre el archivo del repositorio.
 
-Railway leerá `railway.toml`, ejecutará `npm run db:check`, iniciará la salida standalone y consultará `/api/health`.
+## 4. Publicar y validar
 
-El chequeo espera hasta 45 segundos para contemplar el arranque de un proyecto gratuito de Supabase. En los logs siempre imprime una línea `[db:check]` con host y puerto, pero nunca muestra usuario, contraseña ni la URI completa. Si falla, buscá `FALLO_FINAL` en `Deploy Logs`.
+1. Confirmá que Railway despliega la rama `main`.
+2. Cargá las nueve variables.
+3. Elegí `Redeploy` sobre el commit nuevo; si persiste una imagen antigua, usá la opción de limpiar caché.
+4. Revisá `Build Logs`: debe completar `next build`.
+5. Revisá `Deploy Logs`: ya no debe aparecer `db:check`, `db:migrate` ni una conexión PostgreSQL.
+6. Abrí `https://listoficios.up.railway.app/api/health`.
+7. Probá registro, ingreso, publicación y galería.
 
-## 4. Datos demo opcionales
-
-Con la aplicación vinculada y los secretos configurados, podés ejecutar una vez `npm run db:seed` desde un entorno conectado a Supabase. El seed usa números ficticios y marca esos perfiles como demostrativos.
-
-Antes de publicar, fijá alertas de uso en los tres proveedores, probá los flujos críticos y guardá una copia del esquema SQL.
+Si falla `/api/health`, verificá los nombres exactos de las tres variables de Supabase y que el SQL haya terminado sin errores. Un valor que comienza con `https://` corresponde a `NEXT_PUBLIC_SUPABASE_URL`, nunca a `DATABASE_URL`.

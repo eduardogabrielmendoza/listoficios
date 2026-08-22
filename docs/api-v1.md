@@ -11,7 +11,7 @@ Las respuestas exitosas usan `{ "data": ..., "meta": { "requestId": "..." } }`. 
 - `POST /api/v1/professionals/:id/view`: métrica limitada y anonimizada.
 - `POST /api/v1/reports`: reporte anónimo o autenticado.
 - `POST /api/v1/support`: consulta de soporte.
-- `GET /api/health`: salud de aplicación y PostgreSQL.
+- `GET /api/health`: salud de aplicación y Supabase Data API.
 
 ## Cuenta autenticada
 

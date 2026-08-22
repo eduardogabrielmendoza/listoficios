@@ -1,6 +1,48 @@
-import { desc, eq, sql } from "drizzle-orm";
-import { getDb } from "@/db";
-import { moderationActions, professionalProfiles, reports, reviews, supportTickets, user } from "@/db/schema";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { ReportRow, ReviewRow, SupportRow } from "@/lib/supabase/rows";
 
-export async function adminOverview(){const db=getDb();const[countUsers,countProfiles,countReviews,countReports,countSupport,recentReviews,recentReports,recentSupport]=await Promise.all([db.select({value:sql<number>`count(*)::int`}).from(user),db.select({value:sql<number>`count(*)::int`}).from(professionalProfiles),db.select({value:sql<number>`count(*)::int`}).from(reviews).where(eq(reviews.status,"pending")),db.select({value:sql<number>`count(*)::int`}).from(reports).where(eq(reports.status,"open")),db.select({value:sql<number>`count(*)::int`}).from(supportTickets).where(eq(supportTickets.status,"open")),db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(10),db.select().from(reports).orderBy(desc(reports.createdAt)).limit(10),db.select().from(supportTickets).orderBy(desc(supportTickets.createdAt)).limit(10)]);return{counts:{users:countUsers[0]?.value??0,profiles:countProfiles[0]?.value??0,pendingReviews:countReviews[0]?.value??0,openReports:countReports[0]?.value??0,openSupport:countSupport[0]?.value??0},reviews:recentReviews,reports:recentReports,support:recentSupport};}
-export async function moderate(adminUserId:string,input:{targetType:"review"|"report"|"profile"|"support"|"user";targetId:string;action:string;reason:string}){const db=getDb();await db.transaction(async(tx)=>{if(input.targetType==="review"){if(!["published","rejected","pending"].includes(input.action))throw new Error("INVALID_ACTION");await tx.update(reviews).set({status:input.action as "published"|"rejected"|"pending",moderationNote:input.reason,updatedAt:new Date()}).where(eq(reviews.id,input.targetId));}else if(input.targetType==="report"){if(!["reviewing","resolved","dismissed"].includes(input.action))throw new Error("INVALID_ACTION");await tx.update(reports).set({status:input.action as "reviewing"|"resolved"|"dismissed",resolvedBy:adminUserId,resolvedAt:["resolved","dismissed"].includes(input.action)?new Date():null,updatedAt:new Date()}).where(eq(reports.id,input.targetId));}else if(input.targetType==="profile"){if(!["published","paused","suspended"].includes(input.action))throw new Error("INVALID_ACTION");await tx.update(professionalProfiles).set({status:input.action as "published"|"paused"|"suspended",updatedAt:new Date()}).where(eq(professionalProfiles.id,input.targetId));}else if(input.targetType==="support"){if(!["reviewing","resolved","closed"].includes(input.action))throw new Error("INVALID_ACTION");await tx.update(supportTickets).set({status:input.action as "reviewing"|"resolved"|"closed",adminNotes:input.reason,updatedAt:new Date()}).where(eq(supportTickets.id,input.targetId));}else{if(!["ban","unban"].includes(input.action))throw new Error("INVALID_ACTION");await tx.update(user).set({banned:input.action==="ban",banReason:input.action==="ban"?input.reason:null,updatedAt:new Date()}).where(eq(user.id,input.targetId));}await tx.insert(moderationActions).values({adminUserId,targetType:input.targetType,targetId:input.targetId,action:input.action,reason:input.reason});});return{updated:true};}
+async function count(table: string, status?: string) {
+  let query = createAdminClient().from(table).select("id", { count: "exact", head: true });
+  if (status) query = query.eq("status", status);
+  const { count: value, error } = await query;
+  if (error) throw error;
+  return value ?? 0;
+}
+
+export async function adminOverview() {
+  const supabase = createAdminClient();
+  const [users, profiles, pendingReviews, openReports, openSupport, reviewsResult, reportsResult, supportResult] = await Promise.all([
+    count("user_profiles"),
+    count("professional_profiles"),
+    count("reviews", "pending"),
+    count("reports", "open"),
+    count("support_tickets", "open"),
+    supabase.from("reviews").select("*").order("created_at", { ascending: false }).limit(10),
+    supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(10),
+    supabase.from("support_tickets").select("*").order("created_at", { ascending: false }).limit(10),
+  ]);
+  if (reviewsResult.error) throw reviewsResult.error;
+  if (reportsResult.error) throw reportsResult.error;
+  if (supportResult.error) throw supportResult.error;
+  return {
+    counts: { users, profiles, pendingReviews, openReports, openSupport },
+    reviews: (reviewsResult.data ?? []) as unknown as ReviewRow[],
+    reports: (reportsResult.data ?? []) as unknown as ReportRow[],
+    support: (supportResult.data ?? []) as unknown as SupportRow[],
+  };
+}
+
+export async function moderate(adminUserId: string, input: { targetType: "review" | "report" | "profile" | "support" | "user"; targetId: string; action: string; reason: string }) {
+  const { error } = await createAdminClient().rpc("moderate_content", {
+    p_admin_user_id: adminUserId,
+    p_target_type: input.targetType,
+    p_target_id: input.targetId,
+    p_action: input.action,
+    p_reason: input.reason,
+  });
+  if (error) {
+    if (error.message.includes("INVALID_ACTION")) throw new Error("INVALID_ACTION");
+    throw error;
+  }
+  return { updated: true };
+}
