@@ -1,0 +1,2 @@
+import { describe,expect,it } from "vitest";import { checkRateLimit } from "@/lib/server/rate-limit";
+describe("rate limit local",()=>{it("bloquea al superar el máximo de una ventana",async()=>{const key=crypto.randomUUID();expect((await checkRateLimit("test",key,2,60)).allowed).toBe(true);expect((await checkRateLimit("test",key,2,60)).allowed).toBe(true);expect((await checkRateLimit("test",key,2,60)).allowed).toBe(false)})});

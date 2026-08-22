@@ -10,5 +10,5 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome" } },
     { name: "mobile", use: { ...devices["Pixel 5"], channel: "chrome" } },
   ],
-  webServer: { command: "npm.cmd run dev", url: "http://localhost:3000", reuseExistingServer: true, timeout: 120_000 },
+  webServer: { command: process.platform === "win32" ? "npm.cmd run dev" : "npm run dev", url: "http://localhost:3000", reuseExistingServer: true, timeout: 120_000 },
 });
