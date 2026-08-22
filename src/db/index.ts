@@ -16,7 +16,7 @@ function createDatabase() {
   const client = postgres(url, {
     max: process.env.NODE_ENV === "production" ? 5 : 3,
     idle_timeout: 20,
-    connect_timeout: 15,
+    connect_timeout: 45,
     // También permite usar el pooler transaccional de Supabase si fuera necesario.
     prepare: false,
   });

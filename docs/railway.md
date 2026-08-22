@@ -49,6 +49,8 @@ El repositorio fija Node.js 22 mediante `package.json`, `.nvmrc` y `nixpacks.tom
 
 Railway leerá `railway.toml`, ejecutará `npm run db:check`, iniciará la salida standalone y consultará `/api/health`.
 
+El chequeo espera hasta 45 segundos para contemplar el arranque de un proyecto gratuito de Supabase. En los logs siempre imprime una línea `[db:check]` con host y puerto, pero nunca muestra usuario, contraseña ni la URI completa. Si falla, buscá `FALLO_FINAL` en `Deploy Logs`.
+
 ## 4. Datos demo opcionales
 
 Con la aplicación vinculada y los secretos configurados, podés ejecutar una vez `npm run db:seed` desde un entorno conectado a Supabase. El seed usa números ficticios y marca esos perfiles como demostrativos.
