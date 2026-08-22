@@ -43,7 +43,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 El repositorio ya fija Node.js 22 y `railway.toml` define:
 
 - build: `npm run build`
-- start: `npm run start`
+- start: `npm run start` (fuerza `HOSTNAME=0.0.0.0` y respeta el `PORT` de Railway)
 - healthcheck: `/api/health`
 - ningún comando de pre-deploy
 
