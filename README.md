@@ -4,11 +4,11 @@ Marketplace local de servicios para Bella Vista, Tucumán. Permite buscar y cont
 
 ## Stack
 
-- Next.js 16, React 19 y TypeScript
-- PostgreSQL y Drizzle ORM
+- Next.js 16, React 19, TypeScript y Node.js 22
+- PostgreSQL de Supabase y Drizzle ORM
 - Better Auth con cookies `httpOnly`
-- Railway Bucket mediante API S3 privada
-- Zod, React Hook Form, Sharp
+- Cloudinary para imágenes
+- Zod, React Hook Form y Sharp
 - Vitest, Testing Library y Playwright
 
 ## Desarrollo local
@@ -42,8 +42,9 @@ Los comandos de datos disponibles son `db:generate`, `db:migrate`, `db:seed`, `d
 
 - Better Auth procesa las contraseñas; nunca se guardan en el navegador.
 - Los teléfonos se cifran con AES-256-GCM y solo se descifran en la API de contacto.
-- El Bucket es privado; las imágenes se convierten a WebP y se sirven por una ruta controlada.
+- Las imágenes se validan, se limpian de metadatos y se convierten a WebP antes de subirlas a Cloudinary.
+- Las credenciales de Cloudinary son exclusivamente de servidor.
 - No se almacenan DNI, coordenadas exactas ni IP cruda.
 - Las opiniones requieren contacto previo y moderación, pero no acreditan una contratación.
 
-Consultá [la API](docs/api-v1.md), [el despliegue en Railway](docs/railway.md) y [la arquitectura](docs/architecture.md).
+Consultá [la API](docs/api-v1.md), [el despliegue en Railway](docs/railway.md), [la configuración de Supabase](docs/supabase.md) y [la arquitectura](docs/architecture.md).

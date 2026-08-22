@@ -302,4 +302,62 @@ CREATE UNIQUE INDEX "services_profile_slug_uq" ON "services" USING btree ("profi
 CREATE INDEX "services_profile_idx" ON "services" USING btree ("profile_id");--> statement-breakpoint
 CREATE INDEX "session_user_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "support_status_created_idx" ON "support_tickets" USING btree ("status","created_at");--> statement-breakpoint
-CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");
+CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");--> statement-breakpoint
+
+-- Catálogos iniciales de Listoficios. Esta sección puede ejecutarse nuevamente.
+INSERT INTO "categories" ("id", "slug", "name", "description", "icon", "sort_order") VALUES
+	('plomeria', 'plomeria', 'Plomería', 'Pérdidas, instalaciones y urgencias', 'droplet', 0),
+	('electricidad', 'electricidad', 'Electricidad', 'Instalaciones y reparaciones', 'bolt', 1),
+	('gas', 'gas', 'Gasistas', 'Conexión y mantenimiento', 'flame', 2),
+	('pintura', 'pintura', 'Pintura', 'Interiores y exteriores', 'paint', 3),
+	('carpinteria', 'carpinteria', 'Carpintería', 'Muebles y aberturas', 'hammer', 4),
+	('albanileria', 'albanileria', 'Albañilería', 'Obras y reformas', 'brick', 5),
+	('jardineria', 'jardineria', 'Jardinería', 'Poda y cuidado', 'leaf', 6),
+	('refrigeracion', 'refrigeracion', 'Refrigeración', 'Aires y heladeras', 'snowflake', 7)
+ON CONFLICT ("id") DO UPDATE SET
+	"name" = EXCLUDED."name",
+	"description" = EXCLUDED."description",
+	"icon" = EXCLUDED."icon",
+	"sort_order" = EXCLUDED."sort_order",
+	"active" = true,
+	"updated_at" = now();--> statement-breakpoint
+
+INSERT INTO "zones" ("id", "slug", "name", "description", "sort_order") VALUES
+	('centro', 'centro', 'Centro', 'Profesionales que trabajan en Centro, Bella Vista.', 0),
+	('los-pinos', 'los-pinos', 'Los Pinos', 'Profesionales que trabajan en Los Pinos, Bella Vista.', 1),
+	('villa-nueva', 'villa-nueva', 'Villa Nueva', 'Profesionales que trabajan en Villa Nueva, Bella Vista.', 2),
+	('el-mollar', 'el-mollar', 'El Mollar', 'Profesionales que trabajan en El Mollar, Bella Vista.', 3),
+	('san-ramon', 'san-ramon', 'San Ramón', 'Profesionales que trabajan en San Ramón, Bella Vista.', 4),
+	('santa-rita', 'santa-rita', 'Santa Rita', 'Profesionales que trabajan en Santa Rita, Bella Vista.', 5),
+	('la-esperanza', 'la-esperanza', 'La Esperanza', 'Profesionales que trabajan en La Esperanza, Bella Vista.', 6),
+	('alrededores', 'alrededores', 'Alrededores', 'Profesionales que trabajan en los alrededores de Bella Vista.', 7)
+ON CONFLICT ("id") DO UPDATE SET
+	"name" = EXCLUDED."name",
+	"description" = EXCLUDED."description",
+	"sort_order" = EXCLUDED."sort_order",
+	"active" = true,
+	"updated_at" = now();--> statement-breakpoint
+
+-- Supabase expone public mediante su Data API. Sin políticas, RLS bloquea el acceso
+-- anónimo; el backend conserva acceso con la conexión PostgreSQL de servidor.
+ALTER TABLE "account" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "categories" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "contact_events" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "favorites" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "moderation_actions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "notifications" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "portfolio_items" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "professional_profiles" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "profile_daily_stats" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "profile_zones" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "rate_limits" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "reports" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "review_replies" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "reviews" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "service_categories" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "services" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "session" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "support_tickets" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "user" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "verification" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "zones" ENABLE ROW LEVEL SECURITY;
