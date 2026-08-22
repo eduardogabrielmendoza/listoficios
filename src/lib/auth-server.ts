@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { schema } from "@/db/schema";
 import { adminEmails } from "@/lib/server/env";
@@ -62,12 +63,18 @@ export async function getServerSession() {
 
 export async function requireServerSession() {
   const current = await getServerSession();
-  if (!current) throw new Error("UNAUTHORIZED");
+  if (!current) redirect("/ingresar");
   return current;
 }
 
 export async function requireAdminSession() {
   const current = await requireServerSession();
   if (current.user.role !== "admin") throw new Error("FORBIDDEN");
+  return current;
+}
+
+export async function requirePageSession(next="/panel") {
+  const current=await getServerSession();
+  if(!current)redirect(`/ingresar?next=${encodeURIComponent(next)}`);
   return current;
 }
