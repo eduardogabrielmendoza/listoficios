@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Listoficios
 
-## Getting Started
+Demo local de un marketplace de servicios para Bella Vista, Tucumán. Permite buscar y filtrar profesionales, explorar perfiles, iniciar un contacto demostrativo por WhatsApp, guardar favoritos, crear una cuenta local y publicar un servicio.
 
-First, run the development server:
+## Desarrollo
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Verificación completa:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm test
+npm run test:e2e
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Alcance actual
 
-## Learn More
+- Sin backend, base de datos, pagos, reservas ni mensajería interna.
+- Cuenta local con PBKDF2; la contraseña no se guarda en texto plano.
+- Datos demo en `localStorage` y sesión en `sessionStorage` o `localStorage`.
+- General Sans 400, 500 y 600 alojada localmente desde la distribución oficial de Fontshare.
+- La licencia de la fuente está documentada en `src/app/fonts/LICENSE.txt`.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Los perfiles, números telefónicos, galería y opiniones visibles son demostrativos.

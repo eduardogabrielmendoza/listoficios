@@ -1,0 +1,97 @@
+import { expect, test } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+});
+
+test("búsqueda fija Bella Vista y filtros en URL", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Hecho para Bella Vista")).toBeVisible();
+  await page.getByPlaceholder("Ej. plomero, pintar una habitación…").fill("plomero");
+  await page.getByLabel("Zona de Bella Vista").selectOption("Centro");
+  await page.getByRole("button", { name: "Buscar" }).click();
+  await expect(page).toHaveURL(/\/profesionales\?q=plomero&zone=Centro/);
+  await expect(page.getByRole("heading", { name: "Profesionales en Bella Vista" })).toBeVisible();
+});
+
+test("perfil y contacto demo sin cuenta", async ({ page }) => {
+  await page.goto("/profesionales");
+  await page.getByRole("link", { name: /Ver perfil de Diego Sosa/ }).click();
+  await expect(page.getByRole("heading", { name: "Diego Sosa" })).toBeVisible();
+  await page.getByRole("button", { name: "Contactar por WhatsApp" }).click();
+  await expect(page.getByRole("dialog", { name: "Vista previa de contacto" })).toContainText("Hola, vi tu perfil en Listoficios");
+});
+
+test("registro local no guarda contraseña en claro", async ({ page, isMobile }) => {
+  await page.goto("/crear-cuenta");
+  await page.getByLabel("Nombre y apellido").fill("Ana López");
+  await page.getByLabel("Correo electrónico").fill("ana@listoficios.test");
+  await page.getByLabel("Contraseña", { exact: true }).fill("clave-segura-123");
+  await page.getByLabel("Confirmar contraseña").fill("clave-segura-123");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Crear cuenta" }).click();
+  await expect(page).toHaveURL(/\/panel/);
+  const account = await page.evaluate(() => localStorage.getItem("listoficios:account:v1"));
+  expect(account).not.toContain("clave-segura-123");
+  if (isMobile) {
+    await page.getByRole("button", { name: "Abrir menú" }).click();
+    await page.getByRole("button", { name: "Cerrar sesión" }).click();
+    await page.getByRole("button", { name: "Abrir menú" }).click();
+  } else {
+    await page.getByRole("button", { name: "Cerrar sesión" }).first().click();
+  }
+  await expect(page.getByRole("link", { name: "Ingresar" }).first()).toBeVisible();
+});
+
+test("otro servicio y precio 1200 llegan a la vista previa", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => sessionStorage.setItem("listoficios:session:v1", JSON.stringify({ accountId: "demo", name: "Ana", email: "ana@test.com", createdAt: new Date().toISOString(), persistent: false })));
+  await page.goto("/profesionales/crear-perfil");
+  await page.getByLabel("Nombre").fill("Ana");
+  await page.getByLabel("Apellido").fill("Pérez");
+  await page.getByLabel("Correo").fill("ana@test.com");
+  await page.getByLabel("WhatsApp").fill("3815551234");
+  await page.getByRole("button", { name: /Continuar/ }).click();
+  await page.getByRole("button", { name: "+ Otro servicio" }).click();
+  await page.getByLabel("Contanos qué hacés").fill("Reparo máquinas de coser");
+  await page.getByLabel("Años de experiencia").fill("5");
+  await page.getByLabel("Descripción profesional").fill("Reparo máquinas familiares con diagnóstico claro y trabajo cuidadoso en cada visita.");
+  await page.getByRole("button", { name: /Continuar/ }).click();
+  await page.getByRole("button", { name: "Centro" }).click();
+  await page.getByRole("button", { name: /Continuar/ }).click();
+  await page.getByLabel("Modalidad de precio").selectOption("from");
+  await page.getByLabel("Importe orientativo").fill("1200");
+  await expect(page.getByText(/Desde \$1\.200/)).toBeVisible();
+  await page.getByRole("button", { name: /Continuar/ }).click();
+  await expect(page.getByText("Reparo máquinas de coser").first()).toBeVisible();
+  await expect(page.getByText("Desde $1.200")).toBeVisible();
+});
+
+test("brillo no sigue el puntero y selector cabe", async ({ page }) => {
+  await page.goto("/");
+  const glow = page.locator(".ambient-glow").first();
+  const before = await glow.getAttribute("style");
+  await page.mouse.move(320, 220);
+  await page.waitForTimeout(120);
+  expect(await glow.getAttribute("style")).toBe(before);
+  const box = await page.getByLabel("Zona de Bella Vista").boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 9999);
+});
+
+test("agenda antigua redirige al panel protegido", async ({ page }) => {
+  await page.goto("/profesionales/agenda");
+  await expect(page).toHaveURL(/\/panel|\/ingresar/);
+});
+
+test("no hay desborde horizontal en los anchos acordados", async ({ page }) => {
+  for (const width of [390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.getByText("Hecho para Bella Vista")).toBeVisible();
+    const sizes = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+    expect(sizes.scroll).toBeLessThanOrEqual(sizes.client);
+  }
+});

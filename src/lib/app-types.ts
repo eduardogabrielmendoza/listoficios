@@ -1,0 +1,12 @@
+export type PricingMode = "from" | "hourly" | "fixed" | "quote";
+export type GeneralAvailability = "weekdays" | "weekends" | "emergencies" | "coordinate";
+export type ServiceMode = "domicilio" | "taller" | "ambos";
+export type PublicationStatus = "draft" | "published" | "paused";
+export type ProfessionalProfileDraft = { firstName: string; lastName: string; email: string; whatsapp: string; categories: string[]; customService: string; experienceYears: number; bio: string; zones: string[]; serviceMode: ServiceMode; pricingMode: PricingMode; priceAmount: number | null; generalAvailability: GeneralAvailability[]; preferredContact: "whatsapp" | "phone" | "both"; publicationStatus: PublicationStatus; acceptedTerms: boolean; completed: boolean };
+export type LocalAccount = { id: string; name: string; email: string; salt: string; verifier: string; createdAt: string };
+export type LocalSession = { accountId: string; name: string; email: string; createdAt: string; persistent: boolean };
+export type AuthCredentials = { email: string; password: string };
+export type FavoriteEntry = { professionalId: string; createdAt: string };
+export type ContactEvent = { id: string; professionalId: string; professionalName: string; service: string; createdAt: string; channel: "whatsapp" | "phone" };
+export type ServiceProfile = { id: string; slug: string; name: string; initials: string; trade: string; categoryId: string; categories: string[]; customService: string; description: string; experienceYears: number; zones: string[]; serviceMode: ServiceMode; pricingMode: PricingMode; priceAmount: number | null; generalAvailability: GeneralAvailability[]; whatsapp: string; phonePreview: string; rating: number; reviews: number; responseTime: string; skills: string[]; avatarTone: "forest" | "ocean" | "sunset" | "plum"; featured: boolean; isDemo: boolean };
+export type SupportTicket = { id: string; createdAt: string; name: string; email: string; role: "cliente" | "profesional" | "otro"; topic: string; message: string };

@@ -1,0 +1,3 @@
+import type { ProfessionalProfileDraft } from "@/lib/app-types";
+export const defaultProfileDraft: ProfessionalProfileDraft = { firstName: "", lastName: "", email: "", whatsapp: "", categories: [], customService: "", experienceYears: 0, bio: "", zones: [], serviceMode: "domicilio", pricingMode: "quote", priceAmount: null, generalAvailability: ["coordinate"], preferredContact: "whatsapp", publicationStatus: "draft", acceptedTerms: false, completed: false };
+export const BELLA_VISTA_ZONES = ["Centro", "Los Pinos", "Villa Nueva", "El Mollar", "San Ramón", "Santa Rita", "La Esperanza", "Alrededores"] as const;
