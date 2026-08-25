@@ -54,7 +54,7 @@ function mockResult(filters: DirectoryFilters) {
 }
 
 function serviceProfile(profile: ProfileGraph): ServiceProfile {
-  const activeServices = profile.services.filter((service) => service.published);
+  const activeServices = profile.services.filter((service) => service.published && (service.moderation_status ?? "approved") === "approved");
   const first = activeServices[0];
   const categories = [...new Set(activeServices.flatMap((service) => service.service_categories.map((entry) => entry.category_id)))];
   const categoryNames = activeServices.flatMap((service) => service.service_categories.flatMap((entry) => entry.categories?.name ? [entry.categories.name] : []));
@@ -100,7 +100,7 @@ const publishedGraphs = unstable_cache(async () => {
     .eq("status", "published")
     .order("updated_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as unknown as ProfileGraph[];
+  return ((data ?? []) as unknown as ProfileGraph[]).filter((profile) => (profile.moderation_status ?? "approved") === "approved");
 }, ["published-professional-graphs"], { tags: [PUBLIC_PROFESSIONALS_TAG], revalidate: 60 });
 
 const loadPublishedGraphBySlug = unstable_cache(async (slug: string) => {
@@ -111,7 +111,8 @@ const loadPublishedGraphBySlug = unstable_cache(async (slug: string) => {
     .eq("status", "published")
     .maybeSingle();
   if (error) throw error;
-  return data ? data as unknown as ProfileGraph : null;
+  const profile = data ? data as unknown as ProfileGraph : null;
+  return profile && (profile.moderation_status ?? "approved") === "approved" ? profile : null;
 }, ["published-professional-by-slug"], { tags: [PUBLIC_PROFESSIONALS_TAG], revalidate: 60 });
 
 const publishedGraphBySlug = cache(loadPublishedGraphBySlug);
@@ -171,7 +172,7 @@ export async function getPublicProfile(slug: string): Promise<PublicProfessional
   if (!graph) return null;
   const card = serviceProfile(graph);
   const media = graph.portfolio_items.map(mediaItem);
-  const listings: ServiceListing[] = graph.services.filter((service) => service.published).map((service) => ({
+  const listings: ServiceListing[] = graph.services.filter((service) => service.published && (service.moderation_status ?? "approved") === "approved").map((service) => ({
     id: service.id,
     slug: service.slug,
     title: service.title,

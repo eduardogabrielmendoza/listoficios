@@ -15,6 +15,8 @@ export type ProfileRow = {
   accent_color: string;
   service_mode: ServiceMode;
   status: ProfileStatus;
+  moderation_status?: "pending" | "approved" | "rejected" | "changes_requested";
+  moderation_note?: string | null;
   is_demo: boolean;
   views_count: number;
   created_at: string;
@@ -31,6 +33,8 @@ export type ServiceRow = {
   pricing_mode: PricingMode;
   price_amount: number | null;
   published: boolean;
+  moderation_status?: "pending" | "approved" | "rejected" | "changes_requested";
+  moderation_note?: string | null;
   created_at: string;
   updated_at: string;
 };

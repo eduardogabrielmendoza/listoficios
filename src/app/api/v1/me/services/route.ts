@@ -5,6 +5,7 @@ import { PUBLIC_PROFESSIONALS_TAG } from "@/data/professionals";
 import { requireServerSession } from "@/lib/auth-server";
 import { apiData, apiError, requestId } from "@/lib/server/api-response";
 import { serviceInputSchema } from "@/lib/server/validation";
+import { createModerationCase, moderateFields } from "@/lib/server/moderation";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,12 @@ async function write(request: Request) {
   const parsed = serviceInputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return apiError("VALIDATION_ERROR", "Revisá el servicio.", 422, id, z.flattenError(parsed.error).fieldErrors);
   try {
+    const moderation = await moderateFields("service", { title: parsed.data.title, description: parsed.data.description, customService: parsed.data.customService ?? "" });
+    if (moderation.action === "block") return apiError("CONTENT_POLICY_BLOCKED", "Hay contenido que no podemos publicar.", 422, id, moderation.fieldErrors);
+    if (moderation.action === "review") {
+      const caseId = await createModerationCase({ scope: "service", userId, targetId: parsed.data.id ?? null, payload: parsed.data, matches: moderation.matches });
+      if (caseId) return apiData({ moderationStatus: "pending", caseId }, { requestId: id }, { status: 202 });
+    }
     const service = await saveService(userId, parsed.data);
     revalidateTag(PUBLIC_PROFESSIONALS_TAG, "max");
     return apiData(service, { requestId: id });

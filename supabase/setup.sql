@@ -4,6 +4,11 @@
 
 begin;
 
+drop table if exists public.site_config_versions cascade;
+drop table if exists public.site_assets cascade;
+drop table if exists public.media_submissions cascade;
+drop table if exists public.moderation_cases cascade;
+drop table if exists public.moderation_rules cascade;
 drop table if exists public.rate_limits cascade;
 drop table if exists public.moderation_actions cascade;
 drop table if exists public.profile_daily_stats cascade;
@@ -577,6 +582,77 @@ begin
 end;
 $$;
 
+-- Administracion, CMS y moderacion (incluido aqui para instalaciones nuevas).
+alter table public.user_profiles drop constraint if exists user_profiles_role_check;
+alter table public.user_profiles add constraint user_profiles_role_check check (role in ('user', 'moderator', 'admin'));
+alter table public.professional_profiles add column if not exists moderation_status text not null default 'approved', add column if not exists moderation_note text;
+alter table public.professional_profiles add constraint professional_profiles_moderation_status_check check (moderation_status in ('pending', 'approved', 'rejected', 'changes_requested'));
+alter table public.services add column if not exists moderation_status text not null default 'approved', add column if not exists moderation_note text;
+alter table public.services add constraint services_moderation_status_check check (moderation_status in ('pending', 'approved', 'rejected', 'changes_requested'));
+
+create table public.moderation_rules (
+  id uuid primary key default gen_random_uuid(), term text not null, normalized_term text not null,
+  match_type text not null default 'word' check (match_type in ('word', 'phrase')),
+  action text not null check (action in ('review', 'block')),
+  scopes text[] not null default array['profile','service','review','support','report']::text[],
+  category text not null default 'inappropriate', notes text not null default '', active boolean not null default true,
+  hit_count integer not null default 0, created_by uuid references public.user_profiles(id) on delete set null,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+  unique (normalized_term, match_type, action)
+);
+create table public.moderation_cases (
+  id uuid primary key default gen_random_uuid(), target_type text not null check (target_type in ('profile','service','review','support','report','media')),
+  target_id text, user_id uuid references public.user_profiles(id) on delete set null, payload_snapshot jsonb not null default '{}'::jsonb,
+  matches jsonb not null default '[]'::jsonb, priority text not null default 'medium' check (priority in ('low','medium','high')),
+  status text not null default 'open' check (status in ('open','assigned','resolved','dismissed')),
+  decision text not null default 'pending' check (decision in ('pending','approved','rejected','changes_requested')),
+  public_reason text not null default '', internal_note text not null default '', assigned_to uuid references public.user_profiles(id) on delete set null,
+  resolved_by uuid references public.user_profiles(id) on delete set null, resolved_at timestamptz,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table public.media_submissions (
+  id uuid primary key default gen_random_uuid(), profile_id uuid not null references public.professional_profiles(id) on delete cascade,
+  user_id uuid references public.user_profiles(id) on delete set null, kind text not null check (kind in ('avatar','cover','work')),
+  storage_key text not null unique, alt text not null default '', caption text not null default '', width integer not null check (width > 0),
+  height integer not null check (height > 0), replaces_item_id uuid references public.portfolio_items(id) on delete set null,
+  status text not null default 'pending' check (status in ('pending','approved','rejected')), moderation_note text not null default '',
+  reviewed_by uuid references public.user_profiles(id) on delete set null, reviewed_at timestamptz,
+  created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);
+create table public.site_assets (
+  id uuid primary key default gen_random_uuid(), kind text not null check (kind in ('logo','logo_compact','favicon','pwa_icon','open_graph','hero')),
+  storage_key text not null unique, alt text not null default '', width integer not null check (width > 0), height integer not null check (height > 0),
+  bytes integer not null default 0, created_by uuid references public.user_profiles(id) on delete set null, created_at timestamptz not null default now()
+);
+create table public.site_config_versions (
+  id uuid primary key default gen_random_uuid(), version integer not null unique, status text not null check (status in ('draft','published','archived')),
+  config jsonb not null, change_note text not null default '', created_by uuid references public.user_profiles(id) on delete set null,
+  published_by uuid references public.user_profiles(id) on delete set null, created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(), published_at timestamptz
+);
+alter table public.moderation_actions add column actor_role text, add column request_id text, add column before_data jsonb not null default '{}'::jsonb, add column after_data jsonb not null default '{}'::jsonb;
+create index moderation_rules_active_scope_idx on public.moderation_rules(active, action);
+create index moderation_cases_queue_idx on public.moderation_cases(status, priority, created_at);
+create index moderation_cases_target_idx on public.moderation_cases(target_type, target_id);
+create index moderation_cases_assigned_idx on public.moderation_cases(assigned_to, status);
+create index media_submissions_queue_idx on public.media_submissions(status, created_at);
+create index site_assets_kind_idx on public.site_assets(kind, created_at desc);
+create unique index site_config_one_draft_idx on public.site_config_versions(status) where status = 'draft';
+create unique index site_config_one_published_idx on public.site_config_versions(status) where status = 'published';
+insert into public.moderation_rules (term, normalized_term, match_type, action, category, notes) values
+  ('dinero facil','dinero facil','phrase','review','spam','Promesa comercial de riesgo'),
+  ('ganancia garantizada','ganancia garantizada','phrase','review','scam','Promesa economica enganosa'),
+  ('sin ningun riesgo','sin ningun riesgo','phrase','review','scam','Afirmacion absoluta sospechosa'),
+  ('contenido sexual explicito','contenido sexual explicito','phrase','block','sexual','Contenido ajeno al marketplace');
+insert into public.site_config_versions (version,status,config,change_note) values (1,'published',jsonb_build_object(
+  'schemaVersion',1,'brand',jsonb_build_object('name','Listoficios','shortName','Listoficios','description','Servicios y profesionales de Bella Vista, Tucuman.','logoAssetId',null,'compactLogoAssetId',null,'faviconAssetId',null,'pwaAssetId',null,'openGraphAssetId',null),
+  'theme',jsonb_build_object('preset','forest','brand','#18715f','ink','#102f29','accent','#bff16f'),
+  'home',jsonb_build_object('eyebrow','Hecho para Bella Vista','title','Encontra a alguien de confianza','highlight','cerca tuyo.','description','Busca un servicio, compara perfiles y habla directamente por WhatsApp. Facil, local y sin registrarte.','primaryCtaLabel','Buscar profesionales','primaryCtaHref','/profesionales','professionalCtaLabel','Publicar mi servicio','professionalCtaHref','/profesionales/crear-perfil','featuredProfileSlug','','heroAssetId',null,'trustTitle','Mas claridad antes de llamar.','trustDescription','Listoficios organiza la informacion para ayudarte a elegir.','finalCtaTitle','Tu proximo cliente puede estar a pocas cuadras.','finalCtaDescription','Publica lo que haces y deja que Bella Vista te encuentre.'),
+  'footer',jsonb_build_object('tagline','Hecho en Tucuman.','contactEmail','','instagramUrl','','facebookUrl',''),
+  'announcement',jsonb_build_object('enabled',false,'text','','href',''),
+  'seo',jsonb_build_object('title','Listoficios | Profesionales en Bella Vista','description','Encontra profesionales y servicios en Bella Vista, Tucuman.')
+),'Configuracion inicial');
+
 -- Data API cerrada: la aplicacion accede solo con sb_secret_ desde Railway.
 alter table public.user_profiles enable row level security;
 alter table public.categories enable row level security;
@@ -596,6 +672,11 @@ alter table public.notifications enable row level security;
 alter table public.profile_daily_stats enable row level security;
 alter table public.moderation_actions enable row level security;
 alter table public.rate_limits enable row level security;
+alter table public.moderation_rules enable row level security;
+alter table public.moderation_cases enable row level security;
+alter table public.media_submissions enable row level security;
+alter table public.site_assets enable row level security;
+alter table public.site_config_versions enable row level security;
 
 revoke all on all tables in schema public from anon, authenticated;
 grant usage on schema public to service_role;

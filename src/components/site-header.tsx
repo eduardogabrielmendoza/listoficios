@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { Brand } from "@/components/brand";
 import { MobileMenu } from "@/components/mobile-menu";
 
 export function SiteHeader() {
   const { session, logout, ready } = useAuth();
+  const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <header className="relative z-40 border-b border-[var(--line)] bg-[rgba(247,249,246,.9)] px-4 backdrop-blur-xl sm:px-6 lg:px-8">

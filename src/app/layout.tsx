@@ -7,6 +7,7 @@ import { NavigationFeedback } from "@/components/navigation-feedback";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { PwaRegister } from "@/components/pwa-register";
+import { SiteConfigProvider } from "@/components/site-config-provider";
 
 const generalSans = localFont({
   variable: "--font-general-sans", display: "swap",
@@ -28,5 +29,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return <html lang="es-AR" data-scroll-behavior="smooth" className={`${generalSans.variable} h-full antialiased`}><body className="flex min-h-full flex-col"><AuthProvider><Suspense fallback={null}><NavigationFeedback/></Suspense><SiteHeader /><div className="flex-1">{children}</div><SiteFooter /><PwaRegister/></AuthProvider></body></html>;
+  return <html lang="es-AR" data-scroll-behavior="smooth" className={`${generalSans.variable} h-full antialiased`}><body className="flex min-h-full flex-col"><SiteConfigProvider><AuthProvider><Suspense fallback={null}><NavigationFeedback/></Suspense><SiteHeader /><div className="flex-1">{children}</div><SiteFooter /><PwaRegister/></AuthProvider></SiteConfigProvider></body></html>;
 }

@@ -10,6 +10,15 @@ Railway alojará únicamente Next.js. Supabase administrará cuentas y datos por
 
 Si ya ejecutaste `setup.sql` y Listoficios está funcionando, **no vuelvas a ejecutarlo**. Para incorporar foto de perfil, portada y la nueva galería sin borrar datos, ejecutá solamente [`supabase/migrations/0001_profile_media.sql`](../supabase/migrations/0001_profile_media.sql) desde el SQL Editor de Supabase.
 
+### Migracion administrativa actual
+
+Si la aplicacion ya esta funcionando, no vuelvas a ejecutar `setup.sql`. Desde Supabase > SQL Editor ejecuta, en este orden:
+
+1. [`supabase/migrations/0001_profile_media.sql`](../supabase/migrations/0001_profile_media.sql), solamente si aun no fue aplicada.
+2. [`supabase/migrations/0002_admin_cms_moderation.sql`](../supabase/migrations/0002_admin_cms_moderation.sql).
+
+La migracion `0002` es incremental: conserva cuentas, perfiles, servicios e imagenes. Agrega roles, cola de moderacion, reglas, revision manual de imagenes, CMS versionado y auditoria. Al terminar debe devolver una configuracion publicada y los perfiles existentes como aprobados.
+
 ## 2. Variables del servicio web
 
 En `Variables` del servicio de Listoficios cargá exactamente:
@@ -52,6 +61,8 @@ El repositorio ya fija Node.js 22 y `railway.toml` define:
 En Railway, eliminá manualmente cualquier `Pre-deploy Command` que hayas agregado antes en `Settings > Deploy`. Debe quedar vacío; una configuración del panel puede tener prioridad sobre el archivo del repositorio.
 
 ## 4. Publicar y validar
+
+Despues de desplegar, ingresa con el correo configurado en `ADMIN_EMAILS`, abre `/admin` y confirma que `/admin/moderacion`, `/admin/imagenes` y `/admin/contenido` cargan sin el aviso de migracion pendiente.
 
 1. Confirmá que Railway despliega la rama `main`.
 2. Cargá las nueve variables.

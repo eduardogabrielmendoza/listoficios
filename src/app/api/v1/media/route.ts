@@ -58,7 +58,7 @@ async function owner() {
     .eq("user_id", session.user.id)
     .maybeSingle();
   if (error) throw error;
-  return { profile: data, supabase };
+  return { profile: data, supabase, userId: session.user.id };
 }
 
 export async function POST(request: Request) {
@@ -104,6 +104,16 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     };
     const previous = kind === "work" ? null : existing.data?.[0] ?? null;
+    const pending = await access.supabase.from("media_submissions").insert({
+      profile_id: access.profile.id, user_id: access.userId, kind, storage_key: stored.publicId,
+      alt: values.alt, caption: values.caption, width: stored.width, height: stored.height,
+      replaces_item_id: previous?.id ?? null,
+    }).select("id, status").single();
+    if (!pending.error) {
+      storedPublicId = null;
+      return apiData({ id: pending.data.id, status: "pending", message: "La imagen quedó pendiente de revisión." }, { requestId: id }, { status: 202 });
+    }
+    if (!pending.error.message.includes("media_submissions") && pending.error.code !== "PGRST205" && pending.error.code !== "42P01") throw pending.error;
     const saved = previous
       ? await access.supabase.from("portfolio_items").update(values).eq("id", previous.id).select().single()
       : await access.supabase.from("portfolio_items").insert({ ...values, profile_id: access.profile.id, sort_order: kind === "work" ? existing.data?.length ?? 0 : 0 }).select().single();

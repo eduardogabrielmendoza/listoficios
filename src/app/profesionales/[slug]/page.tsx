@@ -46,8 +46,8 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
           {profile.cover ? <Image src={profile.cover.url} alt={profile.cover.alt} fill priority sizes="(max-width: 1200px) 100vw, 1100px" className="object-cover" style={{ objectPosition: `${profile.cover.focalX * 100}% ${profile.cover.focalY * 100}%` }}/> : <><div className="profile-cover-fallback absolute inset-0"/><div className="absolute inset-0 bg-gradient-to-t from-[rgba(8,48,40,.26)] to-transparent"/></>}
           {profile.isDemo && <span className="absolute right-3 top-3 rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-semibold text-[var(--muted)] backdrop-blur">Perfil demostrativo</span>}
         </div>
-        <div className="relative -mt-12 flex flex-col gap-4 px-3 sm:-mt-14 sm:flex-row sm:items-end sm:px-6">
-          <Avatar initials={card.initials} tone={card.avatarTone} imageUrl={profile.avatar?.url ?? card.avatarUrl} className="size-24 border-[5px] border-[var(--paper)] shadow-lg sm:size-28"/>
+        <div className="mt-5 flex flex-col gap-5 rounded-[26px] border border-[var(--line)] bg-white p-5 shadow-[0_14px_40px_rgba(9,48,40,.07)] sm:mt-6 sm:flex-row sm:items-center sm:p-6">
+          <Avatar initials={card.initials} tone={card.avatarTone} imageUrl={profile.avatar?.url ?? card.avatarUrl} className="size-24 shrink-0 border border-[var(--line)] shadow-sm sm:size-28"/>
           <div className="min-w-0 pb-1 sm:pb-2"><p className="section-kicker">{profile.headline}</p><h1 className="mt-1 text-4xl font-semibold tracking-[-.045em] sm:text-6xl">{profile.displayName}</h1><p className="mt-2 text-sm leading-6 text-[var(--muted)]">{profile.reviewCount ? `${profile.rating?.toFixed(1)} · ${profile.reviewCount} opiniones de usuarios · ` : "Sin opiniones todavía · "}{profile.experienceYears} años de experiencia</p></div>
         </div>
       </div>

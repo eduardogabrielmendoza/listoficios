@@ -15,7 +15,7 @@ export type ApiError = {
   };
 };
 
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "moderator" | "admin";
 export type ProfileStatus = "draft" | "published" | "paused" | "suspended";
 export type ReviewStatus = "pending" | "published" | "rejected";
 export type ReportStatus = "open" | "reviewing" | "resolved" | "dismissed";

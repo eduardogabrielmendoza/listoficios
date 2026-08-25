@@ -3,9 +3,11 @@ import { adminEmails } from "@/lib/server/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { supabaseIsConfigured } from "@/lib/supabase/config";
+import type { Permission, StaffRole } from "@/lib/admin-types";
+import { hasPermission, isStaff } from "@/lib/permissions";
 
 export type ServerSession = {
-  user: { id: string; email: string; name: string; role: "user" | "admin" };
+  user: { id: string; email: string; name: string; role: StaffRole };
 };
 
 export function authIsConfigured() {
@@ -20,7 +22,7 @@ export async function getServerSession(): Promise<ServerSession | null> {
   const email = data.user.email.toLowerCase();
   const { data: profile, error: profileError } = await createAdminClient()
     .from("user_profiles")
-    .select("name, banned")
+    .select("name, banned, role")
     .eq("id", data.user.id)
     .maybeSingle();
   if (profileError || profile?.banned) return null;
@@ -29,7 +31,7 @@ export async function getServerSession(): Promise<ServerSession | null> {
       id: data.user.id,
       email,
       name: String(profile?.name ?? data.user.user_metadata?.name ?? email.split("@")[0]),
-      role: adminEmails().includes(email) ? "admin" : "user",
+      role: adminEmails().includes(email) ? "admin" : normalizeRole(profile?.role),
     },
   };
 }
@@ -46,8 +48,24 @@ export async function requireAdminSession() {
   return current;
 }
 
+export async function requireStaffSession() {
+  const current = await requireServerSession();
+  if (!isStaff(current.user.role)) throw new Error("FORBIDDEN");
+  return current;
+}
+
+export async function requirePermission(permission: Permission) {
+  const current = await requireStaffSession();
+  if (!hasPermission(current.user.role, permission)) throw new Error("FORBIDDEN");
+  return current;
+}
+
 export async function requirePageSession(next = "/panel") {
   const current = await getServerSession();
   if (!current) redirect(`/ingresar?next=${encodeURIComponent(next)}`);
   return current;
+}
+
+function normalizeRole(value: unknown): StaffRole {
+  return value === "moderator" || value === "admin" ? value : "user";
 }

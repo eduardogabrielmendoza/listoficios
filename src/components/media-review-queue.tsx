@@ -1,0 +1,11 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+import type { AdminListRow } from "@/data/admin-console";
+
+export function MediaReviewQueue({ initialRows }: { initialRows: AdminListRow[] }) {
+  const [rows, setRows] = useState(initialRows); const [message, setMessage] = useState("");
+  async function decide(id: string, decision: "approved" | "rejected") { const reason = decision === "approved" ? "La imagen cumple las pautas visuales." : prompt("Motivo del rechazo:")?.trim(); if (!reason) return; const response = await fetch(`/api/v1/admin/media/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ decision, reason }) }); const payload = await response.json(); if (response.ok) { setRows((current) => current.filter((row) => row.id !== id)); setMessage("Revisión guardada."); } else setMessage(payload.error?.message ?? "No pudimos guardar."); }
+  return <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{rows.map((row) => <article key={String(row.id)} className="overflow-hidden rounded-[22px] border border-[var(--line)] bg-white"><div className="relative aspect-[4/3] bg-[#edf3f0]"><Image src={`/api/v1/admin/media/${row.id}`} alt={String(row.alt ?? "Imagen pendiente")} fill unoptimized className="object-cover"/></div><div className="p-4"><div className="flex items-center justify-between"><p className="font-semibold capitalize">{String(row.kind)}</p><span className="text-xs text-[var(--muted)]">Pendiente</span></div><p className="mt-2 line-clamp-2 text-xs text-[var(--muted)]">{String(row.caption || row.alt || "Sin descripción")}</p><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={() => void decide(String(row.id), "approved")} className="primary-button !min-h-10 !px-3">Aprobar</button><button onClick={() => void decide(String(row.id), "rejected")} className="min-h-10 rounded-full border border-red-200 px-3 text-sm font-semibold text-red-700">Rechazar</button></div></div></article>)}{rows.length === 0 ? <div className="rounded-[22px] border border-dashed border-[var(--line)] bg-white p-10 text-center sm:col-span-2 xl:col-span-3"><h2 className="font-semibold">No hay imágenes pendientes</h2></div> : null}{message ? <p role="status" className="text-sm text-[var(--brand)] sm:col-span-2 xl:col-span-3">{message}</p> : null}</div>;
+}
