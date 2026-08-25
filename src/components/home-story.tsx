@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
 import { useSiteConfig } from "@/components/site-config-provider";
@@ -66,12 +65,12 @@ export function HomeStory({ professionals }: { professionals: ServiceProfile[] }
               <div className="story-profile-stack">
                 <div data-story-piece className="story-stack-label"><span>Perfiles encontrados</span><strong>{professionals.slice(0, 3).length}</strong></div>
                 {professionals.slice(0, 3).map((profile, index) => (
-                  <Link data-story-piece key={profile.id} href={`/profesionales/${profile.slug}`} className={`story-profile-card ${index === 0 ? "is-featured" : ""}`}>
+                  <div data-home-demo data-story-piece key={profile.id} className={`story-profile-card ${index === 0 ? "is-featured" : ""}`}>
                     <Avatar initials={profile.initials} tone={profile.avatarTone} imageUrl={profile.avatarUrl} className="size-12" />
                     <span className="min-w-0 flex-1"><strong>{profile.name}</strong><small>{profile.trade} · {profile.zones[0]}</small><i>{profile.experienceYears} años de experiencia</i></span>
                     <span className="story-profile-price">{formatPrice(profile.pricingMode, profile.priceAmount)}</span>
-                    <Icon name="arrow-right" className="size-4" />
-                  </Link>
+                    <span className="story-demo-label">Ejemplo</span>
+                  </div>
                 ))}
               </div>
             </article>
@@ -91,7 +90,7 @@ export function HomeStory({ professionals }: { professionals: ServiceProfile[] }
                 <div data-story-piece className="story-message"><Icon name="message" className="size-5" /><p>{site.motion.contactText}</p></div>
                 <div data-story-piece className="story-message story-message-reply"><p>¡Hola! Contame un poco más y coordinamos.</p><Icon name="check" className="size-4" /></div>
                 <div data-story-piece className="story-direct-line"><span /><p><Icon name="shield" className="size-4" /> Contacto directo</p><span /></div>
-                <Link data-story-piece href={featured ? `/profesionales/${featured.slug}` : "/profesionales"} className="story-contact-cta">Ver perfil y contactar <Icon name="arrow-right" className="size-4" /></Link>
+                <div data-home-demo data-story-piece className="story-contact-cta"><Icon name="check" className="size-4" /> Contacto preparado <span>Ejemplo visual</span></div>
               </div>
             </article>
           </div>

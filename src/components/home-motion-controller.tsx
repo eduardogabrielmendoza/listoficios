@@ -3,8 +3,9 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Lenis from "lenis";
+import { useGlobalScroll } from "@/components/global-scroll-provider";
 import type { HomeMotionMode } from "@/lib/home-motion";
+import { motionTokens } from "@/lib/motion-tokens";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -21,39 +22,32 @@ function drawPath(path: SVGPathElement, trigger: string, start: string, end: str
 }
 
 export default function HomeMotionController({ mode }: { mode: HomeMotionMode }) {
+  const { lenis, acquireExternalFrame } = useGlobalScroll();
   useGSAP(() => {
     const home = document.querySelector<HTMLElement>("[data-motion-home]");
     if (!home) return;
     home.classList.add("home-motion-ready", `home-motion-${mode}`);
+    if (new URLSearchParams(window.location.search).get("motionDebug") === "1") home.classList.add("home-motion-debug");
+    const onVisibility = () => document.hidden ? gsap.ticker.sleep() : gsap.ticker.wake();
+    document.addEventListener("visibilitychange", onVisibility);
 
-    let lenis: Lenis | null = null;
     let removeLenisScroll: (() => void) | undefined;
+    let releaseExternalFrame: (() => void) | undefined;
     const updateLenis = (time: number) => lenis?.raf(time * 1000);
-    if (mode === "desktop") {
-      lenis = new Lenis({
-        autoRaf: false,
-        lerp: 0.105,
-        smoothWheel: true,
-        syncTouch: false,
-        wheelMultiplier: 0.92,
-        anchors: { offset: -84 },
-        allowNestedScroll: true,
-        stopInertiaOnNavigate: true,
-        respectReducedMotion: true,
-      });
+    if (mode === "desktop" && lenis) {
+      releaseExternalFrame = acquireExternalFrame();
       removeLenisScroll = lenis.on("scroll", ScrollTrigger.update);
       gsap.ticker.add(updateLenis);
       gsap.ticker.lagSmoothing(0);
-      document.documentElement.dataset.smoothScroll = "active";
     }
 
     gsap.timeline({ defaults: { ease: "power3.out" } })
-      .from("[data-motion-hero-eyebrow]", { yPercent: 115, opacity: 0, duration: 0.55 })
-      .from("[data-motion-title-line]", { yPercent: 110, opacity: 0, duration: 0.8, stagger: 0.1 }, "-=0.25")
-      .from("[data-motion-highlight]", { "--motion-sweep": "0%", duration: 0.7 }, "-=0.35")
-      .from("[data-motion-hero-copy]", { y: 20, opacity: 0, duration: 0.55 }, "-=0.4")
-      .from("[data-motion-search]", { y: 22, opacity: 0, scale: 0.985, duration: 0.65 }, "-=0.35")
-      .from("[data-motion-hero-card]", { y: 36, opacity: 0, scale: 0.94, duration: 0.8 }, "-=0.55");
+      .from("[data-motion-hero-eyebrow]", { yPercent: 90, opacity: 0, duration: 0.34 }, 0)
+      .from("[data-motion-title-line]", { yPercent: 82, opacity: 0, duration: 0.52, stagger: 0.055 }, 0.05)
+      .from("[data-motion-highlight]", { "--motion-sweep": "0%", duration: 0.42 }, 0.24)
+      .from("[data-motion-hero-copy]", { y: 13, opacity: 0, duration: 0.36 }, 0.28)
+      .from("[data-motion-search]", { y: 12, scale: 0.99, duration: 0.42 }, 0.2)
+      .from("[data-motion-hero-card]", { y: 18, scale: 0.97, duration: 0.48 }, 0.22);
 
     if (mode === "desktop") {
       gsap.to("[data-motion-hero-copy-group]", { yPercent: 9, ease: "none", scrollTrigger: { trigger: "[data-motion-hero]", start: "top top", end: "bottom top", scrub: 0.7 } });
@@ -63,55 +57,64 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
     reveal("[data-motion-category-card]", "[data-motion-categories]", 0.07);
     gsap.from("[data-motion-category-rule]", { scaleX: 0, transformOrigin: "left center", ease: "none", scrollTrigger: { trigger: "[data-motion-categories]", start: "top 78%", end: "top 42%", scrub: true } });
 
-    const professionals = document.querySelector<HTMLElement>("[data-motion-professionals]");
-    const professionalsSticky = document.querySelector<HTMLElement>("[data-professionals-sticky]");
-    const professionalScenes = gsap.utils.toArray<HTMLElement>("[data-professional-scene]");
-    const professionalDots = gsap.utils.toArray<HTMLElement>("[data-professional-dot]");
-    if (professionals && professionalsSticky && professionalScenes.length) {
+    const services = document.querySelector<HTMLElement>("[data-motion-services]");
+    const servicesSticky = document.querySelector<HTMLElement>("[data-services-sticky]");
+    const serviceScenes = gsap.utils.toArray<HTMLElement>("[data-services-scene]");
+    const serviceDots = gsap.utils.toArray<HTMLElement>("[data-services-dot]");
+    const serviceMapPath = document.querySelector<SVGPathElement>("[data-services-map-path]");
+    if (services && servicesSticky && serviceScenes.length) {
+      gsap.from("[data-services-intro-copy]", { y: 34, opacity: 0, duration: 0.75, ease: "power3.out", scrollTrigger: { trigger: "[data-services-intro]", start: "top 84%", toggleActions: "play none none reverse" } });
       if (mode === "desktop") {
-        gsap.set(professionalScenes, { autoAlpha: 0, y: 48, scale: 0.965 });
-        gsap.set(professionalScenes[0], { autoAlpha: 1, y: 0, scale: 1 });
-        gsap.set(professionalDots[0], { color: "var(--ink)", opacity: 1 });
-        const professionalDistance = () => Math.max(2100, window.innerHeight * 2.65);
-        const professionalTimeline = gsap.timeline({
+        gsap.set(serviceScenes, { autoAlpha: 0, y: 42, scale: 0.98 });
+        gsap.set(serviceScenes[0], { autoAlpha: 1, y: 0, scale: 1 });
+        gsap.set(serviceDots[0], { color: "var(--ink)", opacity: 1 });
+        let mapLength = 0;
+        if (serviceMapPath) {
+          mapLength = serviceMapPath.getTotalLength();
+          gsap.set(serviceMapPath, { strokeDasharray: mapLength, strokeDashoffset: mapLength });
+        }
+        const servicesDistance = () => Math.max(motionTokens.services.minimumDistance, window.innerHeight * motionTokens.services.screens);
+        const servicesTimeline = gsap.timeline({
           defaults: { ease: "power2.inOut" },
           scrollTrigger: {
-            trigger: professionals,
-            pin: professionalsSticky,
+            trigger: servicesSticky,
+            pin: servicesSticky,
             pinSpacing: true,
             start: "top top",
-            end: () => `+=${professionalDistance()}`,
-            scrub: 0.48,
+            end: () => `+=${servicesDistance()}`,
+            scrub: motionTokens.services.scrub,
             anticipatePin: 1,
             invalidateOnRefresh: true,
             refreshPriority: 1,
+            preventOverlaps: "home-services",
+            fastScrollEnd: true,
+            onToggle: (self) => servicesSticky.classList.toggle("is-motion-active", self.isActive),
           },
         });
 
-        professionalTimeline
-          .from("[data-motion-professional-title]", { yPercent: 105, autoAlpha: 0, duration: 0.28, ease: "power3.out" }, 0)
-          .from(".home-professionals-summary", { x: 24, autoAlpha: 0, duration: 0.22 }, 0.06)
-          .from(professionalScenes[0].querySelectorAll("[data-professional-piece]"), { y: 28, autoAlpha: 0, stagger: 0.055, duration: 0.34, ease: "power3.out" }, 0.14)
-          .to({}, { duration: 0.28 });
+        servicesTimeline.to({}, { duration: 0.42 });
 
-        professionalScenes.forEach((scene, index) => {
+        serviceScenes.forEach((scene, index) => {
           if (index === 0) return;
-          const previous = professionalScenes[index - 1];
-          professionalTimeline
-            .to(previous, { autoAlpha: 0, y: -46, scale: 0.94, duration: 0.34 })
-            .to(scene, { autoAlpha: 1, y: 0, scale: 1, duration: 0.42, ease: "power3.out" }, "<0.05")
-            .fromTo(scene.querySelectorAll("[data-professional-piece]"), { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.055, duration: 0.38, ease: "power3.out" }, "<0.11")
-            .to(professionalDots[index - 1], { opacity: 0.38, color: "var(--muted)", duration: 0.12 }, "<")
-            .to(professionalDots[index], { opacity: 1, color: "var(--ink)", duration: 0.12 }, "<")
-            .to({}, { duration: index === professionalScenes.length - 1 ? 0.52 : 0.24 });
+          const previous = serviceScenes[index - 1];
+          servicesTimeline
+            .to(previous, { autoAlpha: 0, y: -38, scale: 0.975, duration: 0.32 })
+            .to(scene, { autoAlpha: 1, y: 0, scale: 1, duration: 0.4, ease: "power3.out" }, "<0.06")
+            .fromTo(scene.querySelectorAll("[data-services-piece]"), { y: 26, autoAlpha: 0, scale: 0.97 }, { y: 0, autoAlpha: 1, scale: 1, stagger: 0.05, duration: 0.38, ease: "power3.out" }, "<0.1")
+            .to(serviceDots[index - 1], { opacity: 0.38, color: "var(--muted)", duration: 0.12 }, "<")
+            .to(serviceDots[index], { opacity: 1, color: "var(--ink)", duration: 0.12 }, "<");
+          if (index === 2 && serviceMapPath) servicesTimeline.to(serviceMapPath, { strokeDashoffset: 0, duration: 0.42, ease: "none" }, "<0.08");
+          servicesTimeline.to({}, { duration: index === serviceScenes.length - 1 ? 0.58 : 0.24 });
         });
 
-        const professionalDuration = professionalTimeline.duration();
-        professionalTimeline.fromTo("[data-professional-progress]", { scaleX: 0 }, { scaleX: 1, transformOrigin: "left center", duration: professionalDuration, ease: "none" }, 0);
-        professionalTimeline.to(".home-professional-watermark", { xPercent: -9, duration: professionalDuration, ease: "none" }, 0);
+        const servicesDuration = servicesTimeline.duration();
+        servicesTimeline.fromTo("[data-services-progress]", { scaleX: 0 }, { scaleX: 1, transformOrigin: "left center", duration: servicesDuration, ease: "none" }, 0);
+        servicesTimeline.to(".services-orbit", { rotate: (index) => index ? -95 : 110, duration: servicesDuration, ease: "none" }, 0);
       } else {
-        reveal("[data-motion-professional-title], .home-professionals-summary", "[data-motion-professionals]", 0.08);
-        professionalScenes.forEach((scene) => gsap.from(scene, { y: 34, opacity: 0, duration: 0.72, ease: "power3.out", scrollTrigger: { trigger: scene, start: "top 86%", toggleActions: "play none none reverse" } }));
+        serviceScenes.forEach((scene) => {
+          gsap.from(scene.querySelectorAll("[data-services-piece]"), { y: 18, opacity: 0, scale: 0.985, stagger: 0.07, duration: 0.34, ease: "power3.out", scrollTrigger: { trigger: scene, start: "top 79%", toggleActions: "play none none reverse" } });
+        });
+        if (serviceMapPath) drawPath(serviceMapPath, ".services-zones-scene", "top 82%", "center 52%");
       }
     }
 
@@ -138,7 +141,7 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         gsap.set(scenes, { autoAlpha: 0, y: 34, scale: 0.985 });
         gsap.set(scenes[0], { autoAlpha: 1, y: 0, scale: 1 });
         gsap.set(dots[0], { scale: 1.35, backgroundColor: "var(--accent)" });
-        const scrollDistance = () => Math.max(2800, window.innerHeight * 3.45);
+        const scrollDistance = () => Math.max(motionTokens.story.minimumDistance, window.innerHeight * motionTokens.story.screens);
         const storyTimeline = gsap.timeline({
           defaults: { ease: "power2.inOut" },
           scrollTrigger: {
@@ -147,10 +150,13 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
             pinSpacing: true,
             start: "top top",
             end: () => `+=${scrollDistance()}`,
-            scrub: 0.5,
+            scrub: motionTokens.story.scrub,
             anticipatePin: 1,
             invalidateOnRefresh: true,
             refreshPriority: 2,
+            preventOverlaps: "home-story",
+            fastScrollEnd: true,
+            onToggle: (self) => sticky.classList.toggle("is-motion-active", self.isActive),
           },
         });
 
@@ -180,15 +186,17 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
     document.fonts?.ready.then(refresh).catch(() => undefined);
     return () => {
       active = false;
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("load", refresh);
       removeLenisScroll?.();
       gsap.ticker.remove(updateLenis);
-      lenis?.destroy();
+      releaseExternalFrame?.();
+      servicesSticky?.classList.remove("is-motion-active");
+      sticky?.classList.remove("is-motion-active");
       gsap.ticker.lagSmoothing(500, 33);
-      delete document.documentElement.dataset.smoothScroll;
-      home.classList.remove("home-motion-ready", `home-motion-${mode}`);
+      home.classList.remove("home-motion-ready", `home-motion-${mode}`, "home-motion-debug");
     };
-  }, { dependencies: [mode], revertOnUpdate: true });
+  }, { dependencies: [mode, lenis, acquireExternalFrame], revertOnUpdate: true });
 
   return null;
 }

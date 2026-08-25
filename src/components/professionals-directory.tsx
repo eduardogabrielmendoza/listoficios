@@ -2,6 +2,7 @@
 import { FormEvent, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useScrollLock } from "@/components/global-scroll-provider";
 import { Icon } from "@/components/icons";
 import { ProfessionalCard } from "@/components/professional-card";
 import type { PricingMode, ServiceProfile } from "@/lib/app-types";
@@ -12,6 +13,7 @@ export function ProfessionalsDirectory({initialData,total}:{initialData:ServiceP
   const params = useSearchParams(); const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [q, setQ] = useState(params.get("q") ?? ""); const [mobileFilters, setMobileFilters] = useState(false);
+  useScrollLock(mobileFilters);
   const category = params.get("category") ?? ""; const zone = params.get("zone") ?? "";
   const pricing = (params.get("pricing") ?? "") as PricingMode | "";
   const sort = (params.get("sort") as "relevance" | "rating" | "price") || "relevance";

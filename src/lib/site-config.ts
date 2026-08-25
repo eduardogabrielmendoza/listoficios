@@ -6,28 +6,42 @@ const nullableId = z.uuid().nullable();
 
 export const homeMotionSchema = z.object({
   enabled: z.boolean(),
+  smoothScrollEnabled: z.boolean(),
   storyEyebrow: z.string().trim().min(3).max(60),
   needText: z.string().trim().min(5).max(100),
   searchText: z.string().trim().min(5).max(120),
   compareText: z.string().trim().min(5).max(120),
   contactText: z.string().trim().min(5).max(120),
   finalText: z.string().trim().min(5).max(120),
+  servicesEyebrow: z.string().trim().min(3).max(60),
+  servicesTitle: z.string().trim().min(5).max(100),
+  servicesNeedText: z.string().trim().min(5).max(120),
+  servicesCategoriesText: z.string().trim().min(5).max(140),
+  servicesZonesText: z.string().trim().min(5).max(140),
+  servicesClarityText: z.string().trim().min(5).max(140),
 });
 
 export type HomeMotionConfig = z.infer<typeof homeMotionSchema>;
 
 export const defaultHomeMotion: HomeMotionConfig = {
   enabled: true,
+  smoothScrollEnabled: true,
   storyEyebrow: "De una necesidad a una solución",
   needText: "Necesito alguien que pueda…",
   searchText: "Arreglar una pérdida de agua",
   compareText: "Compará experiencia, zonas y forma de trabajo.",
   contactText: "Hola, vi tu perfil en Listoficios…",
   finalText: "Hablá directamente, sin intermediarios.",
+  servicesEyebrow: "Un mapa de posibilidades",
+  servicesTitle: "Servicios cerca tuyo",
+  servicesNeedText: "Empezá por contar qué necesitás resolver.",
+  servicesCategoriesText: "Cada necesidad puede convertirse en uno o varios oficios.",
+  servicesZonesText: "Explorá cobertura en los barrios y alrededores de Bella Vista.",
+  servicesClarityText: "Más información para decidir con tranquilidad.",
 };
 
 export const siteConfigSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   brand: z.object({
     name: z.string().trim().min(2).max(40), shortName: z.string().trim().min(2).max(20),
     description: z.string().trim().min(20).max(180), logoAssetId: nullableId,
@@ -52,7 +66,7 @@ export const siteConfigSchema = z.object({
 export type SiteConfig = z.infer<typeof siteConfigSchema>;
 
 export const defaultSiteConfig: SiteConfig = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   brand: { name: "Listoficios", shortName: "Listoficios", description: "Servicios y profesionales de Bella Vista, Tucumán.", logoAssetId: null, compactLogoAssetId: null, faviconAssetId: null, pwaAssetId: null, openGraphAssetId: null },
   theme: { preset: "forest", brand: "#18715f", ink: "#102f29", accent: "#bff16f" },
   home: {
@@ -75,7 +89,7 @@ export function normalizeSiteConfig(input: unknown): SiteConfig {
   if (!input || typeof input !== "object") return defaultSiteConfig;
   const source = input as Record<string, unknown>;
   const motion = typeof source.motion === "object" && source.motion ? source.motion : {};
-  const candidate = { ...source, schemaVersion: 2, motion: { ...defaultHomeMotion, ...motion } };
+  const candidate = { ...source, schemaVersion: 3, motion: { ...defaultHomeMotion, ...motion } };
   const parsed = siteConfigSchema.safeParse(candidate);
   return parsed.success ? parsed.data : defaultSiteConfig;
 }

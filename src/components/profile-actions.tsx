@@ -1,6 +1,100 @@
 "use client";
-import { FormEvent,useEffect,useState } from "react";import Link from "next/link";import { useAuth } from "@/components/auth-provider";import { Icon } from "@/components/icons";import type { ServiceProfile } from "@/lib/app-types";
-type ContactPreview={channel:"whatsapp"|"phone";phonePreview:string;url:string|null;message:string;demo:boolean};
-export function ProfileActions({profile}:{profile:ServiceProfile}){const{session}=useAuth();const[favorite,setFavorite]=useState(false);const[preview,setPreview]=useState<ContactPreview|null>(null);const[reportOpen,setReportOpen]=useState(false);const[reportNumber,setReportNumber]=useState("");const[busy,setBusy]=useState(false);const[error,setError]=useState("");useEffect(()=>{if(!session)return;void fetch("/api/v1/me/favorites").then((response)=>response.ok?response.json():null).then((payload)=>setFavorite(Boolean(payload?.data?.some((entry:{profile?:{id:string}})=>entry.profile?.id===profile.id)))).catch(()=>undefined);},[profile.id,session]);async function toggleFavorite(){if(!session)return;setBusy(true);setError("");try{const response=await fetch(`/api/v1/favorites/${profile.id}`,{method:favorite?"DELETE":"POST"});const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message??"No pudimos actualizar el favorito.");setFavorite(!favorite);}catch(cause){setError(cause instanceof Error?cause.message:"No pudimos actualizar el favorito.");}finally{setBusy(false);}}async function contact(channel:"whatsapp"|"phone"){setBusy(true);setError("");try{const response=await fetch(`/api/v1/professionals/${profile.id}/contact`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({channel})});const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message??"No pudimos preparar el contacto.");setPreview(payload.data);}catch(cause){setError(cause instanceof Error?cause.message:"No pudimos preparar el contacto.");}finally{setBusy(false);}}async function report(event:FormEvent<HTMLFormElement>){event.preventDefault();setBusy(true);setError("");const form=new FormData(event.currentTarget);const response=await fetch("/api/v1/reports",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({targetType:"profile",targetId:profile.id,reason:String(form.get("reason")),description:String(form.get("description"))})});const payload=await response.json();if(response.ok){setReportNumber(payload.data.number);setReportOpen(false);}else setError(payload.error?.message??"No pudimos enviar el reporte.");setBusy(false);}
-return <><div className="grid gap-3"><button disabled={busy} onClick={()=>contact("whatsapp")} className="primary-button w-full disabled:opacity-60"><Icon name="message" className="size-5"/> Contactar por WhatsApp</button><button disabled={busy} onClick={()=>contact("phone")} className="secondary-button w-full disabled:opacity-60"><Icon name="phone" className="size-5"/> Llamar</button><div className="grid grid-cols-2 gap-2">{session?<button disabled={busy} onClick={toggleFavorite} className="h-11 rounded-full border border-[var(--line)] text-sm font-medium"><Icon name="heart" className={`mr-2 inline size-4 ${favorite?"fill-[#c95252] text-[#c95252]":""}`}/>{favorite?"Guardado":"Guardar"}</button>:<Link href={`/ingresar?next=/profesionales/${profile.slug}`} className="grid h-11 place-items-center rounded-full border border-[var(--line)] text-sm font-medium">Guardar</Link>}<button onClick={()=>setReportOpen(true)} className="h-11 rounded-full border border-[var(--line)] text-sm font-medium">Reportar</button></div>{reportNumber&&<p role="status" className="rounded-xl bg-[#eef6f3] p-3 text-xs text-[var(--brand)]">Reporte {reportNumber} registrado.</p>}{error&&<p role="alert" className="rounded-xl bg-[#fff0ed] p-3 text-xs text-[#9b392d]">{error}</p>}</div>{preview&&<ContactDialog preview={preview} name={profile.name} close={()=>setPreview(null)}/>} {reportOpen&&<div className="fixed inset-0 z-[100] grid place-items-center bg-[rgba(9,32,28,.46)] p-4"><button className="absolute inset-0" onClick={()=>setReportOpen(false)} aria-label="Cerrar"/><form onSubmit={report} role="dialog" aria-modal="true" aria-labelledby="report-title" className="relative grid w-full max-w-md gap-4 rounded-[28px] bg-white p-7"><h2 id="report-title" className="text-2xl font-semibold">Reportar perfil</h2><p className="text-sm leading-6 text-[var(--muted)]">El equipo revisará el contenido. No incluyas datos sensibles.</p><label className="field-label">Motivo<select name="reason" className="field-input"><option value="informacion_falsa">Información falsa</option><option value="contenido_inapropiado">Contenido inapropiado</option><option value="estafa">Posible estafa</option><option value="spam">Spam</option><option value="otro">Otro</option></select></label><label className="field-label">Descripción<textarea name="description" maxLength={800} rows={4} className="field-input resize-y"/></label><div className="flex gap-2"><button disabled={busy} className="primary-button">Enviar reporte</button><button type="button" onClick={()=>setReportOpen(false)} className="secondary-button">Cancelar</button></div></form></div>}</>}
-function ContactDialog({preview,name,close}:{preview:ContactPreview;name:string;close:()=>void}){return <div className="fixed inset-0 z-[100] grid place-items-center bg-[rgba(9,32,28,.46)] p-4"><button className="absolute inset-0" onClick={close} aria-label="Cerrar"/><div role="dialog" aria-modal="true" aria-labelledby="contact-title" className="relative w-full max-w-md rounded-[28px] bg-white p-7 shadow-2xl"><button onClick={close} className="absolute right-5 top-5" aria-label="Cerrar"><Icon name="x" className="size-5"/></button><span className="grid size-12 place-items-center rounded-2xl bg-[#e4f2ed] text-[var(--brand)]"><Icon name={preview.channel==="whatsapp"?"message":"phone"} className="size-6"/></span><h2 id="contact-title" className="mt-5 text-2xl font-semibold">Contacto preparado</h2><p className="mt-3 text-sm leading-6 text-[var(--muted)]">{name} · {preview.phonePreview}</p>{preview.channel==="whatsapp"&&<div className="mt-4 rounded-2xl bg-[#eef7f3] p-4 text-sm leading-6">{preview.message}</div>}{preview.demo?<p className="mt-4 text-xs leading-5 text-[#7e8b87]">Este perfil es demostrativo y nunca abre un número real.</p>:preview.url&&<a href={preview.url} target="_blank" rel="noreferrer" className="primary-button mt-6 w-full">{preview.channel==="whatsapp"?"Abrir WhatsApp":"Iniciar llamada"}</a>}<button onClick={close} className="secondary-button mt-3 w-full">Cerrar</button></div></div>}
+
+import Link from "next/link";
+import { type FormEvent, useEffect, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
+import { useScrollLock } from "@/components/global-scroll-provider";
+import { Icon } from "@/components/icons";
+import type { ServiceProfile } from "@/lib/app-types";
+
+type ContactPreview = { channel: "whatsapp" | "phone"; phonePreview: string; url: string | null; message: string; demo: boolean };
+
+export function ProfileActions({ profile }: { profile: ServiceProfile }) {
+  const { session } = useAuth();
+  const [favorite, setFavorite] = useState(false);
+  const [preview, setPreview] = useState<ContactPreview | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportNumber, setReportNumber] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useScrollLock(Boolean(preview) || reportOpen);
+
+  useEffect(() => {
+    if (!session) return;
+    void fetch("/api/v1/me/favorites")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => setFavorite(Boolean(payload?.data?.some((entry: { profile?: { id: string } }) => entry.profile?.id === profile.id))))
+      .catch(() => undefined);
+  }, [profile.id, session]);
+
+  async function toggleFavorite() {
+    if (!session) return;
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/v1/favorites/${profile.id}`, { method: favorite ? "DELETE" : "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message ?? "No pudimos actualizar el favorito.");
+      setFavorite(!favorite);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No pudimos actualizar el favorito."); }
+    finally { setBusy(false); }
+  }
+
+  async function contact(channel: "whatsapp" | "phone") {
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/v1/professionals/${profile.id}/contact`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message ?? "No pudimos preparar el contacto.");
+      setPreview(payload.data);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "No pudimos preparar el contacto."); }
+    finally { setBusy(false); }
+  }
+
+  async function report(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setError("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/v1/reports", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ targetType: "profile", targetId: profile.id, reason: String(form.get("reason")), description: String(form.get("description")) }) });
+    const payload = await response.json();
+    if (response.ok) { setReportNumber(payload.data.number); setReportOpen(false); }
+    else setError(payload.error?.message ?? "No pudimos enviar el reporte.");
+    setBusy(false);
+  }
+
+  return <>
+    <div className="grid gap-3">
+      <button disabled={busy} onClick={() => contact("whatsapp")} className="primary-button w-full disabled:opacity-60"><Icon name="message" className="size-5" /> Contactar por WhatsApp</button>
+      <button disabled={busy} onClick={() => contact("phone")} className="secondary-button w-full disabled:opacity-60"><Icon name="phone" className="size-5" /> Llamar</button>
+      <div className="grid grid-cols-2 gap-2">
+        {session ? <button disabled={busy} onClick={toggleFavorite} className="h-11 rounded-full border border-[var(--line)] text-sm font-medium"><Icon name="heart" className={`mr-2 inline size-4 ${favorite ? "fill-[#c95252] text-[#c95252]" : ""}`} />{favorite ? "Guardado" : "Guardar"}</button> : <Link href={`/ingresar?next=/profesionales/${profile.slug}`} className="grid h-11 place-items-center rounded-full border border-[var(--line)] text-sm font-medium">Guardar</Link>}
+        <button onClick={() => setReportOpen(true)} className="h-11 rounded-full border border-[var(--line)] text-sm font-medium">Reportar</button>
+      </div>
+      {reportNumber && <p role="status" className="rounded-xl bg-[#eef6f3] p-3 text-xs text-[var(--brand)]">Reporte {reportNumber} registrado.</p>}
+      {error && <p role="alert" className="rounded-xl bg-[#fff0ed] p-3 text-xs text-[#9b392d]">{error}</p>}
+    </div>
+    {preview && <ContactDialog preview={preview} name={profile.name} close={() => setPreview(null)} />}
+    {reportOpen && <div data-scroll-native className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto overscroll-contain bg-[rgba(9,32,28,.46)] p-4">
+      <button className="absolute inset-0" onClick={() => setReportOpen(false)} aria-label="Cerrar" />
+      <form onSubmit={report} role="dialog" aria-modal="true" aria-labelledby="report-title" className="relative grid w-full max-w-md gap-4 rounded-[28px] bg-white p-7">
+        <h2 id="report-title" className="text-2xl font-semibold">Reportar perfil</h2><p className="text-sm leading-6 text-[var(--muted)]">El equipo revisará el contenido. No incluyas datos sensibles.</p>
+        <label className="field-label">Motivo<select name="reason" className="field-input"><option value="informacion_falsa">Información falsa</option><option value="contenido_inapropiado">Contenido inapropiado</option><option value="estafa">Posible estafa</option><option value="spam">Spam</option><option value="otro">Otro</option></select></label>
+        <label className="field-label">Descripción<textarea name="description" maxLength={800} rows={4} className="field-input resize-y" /></label>
+        <div className="flex gap-2"><button disabled={busy} className="primary-button">Enviar reporte</button><button type="button" onClick={() => setReportOpen(false)} className="secondary-button">Cancelar</button></div>
+      </form>
+    </div>}
+  </>;
+}
+
+function ContactDialog({ preview, name, close }: { preview: ContactPreview; name: string; close: () => void }) {
+  return <div data-scroll-native className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto overscroll-contain bg-[rgba(9,32,28,.46)] p-4">
+    <button className="absolute inset-0" onClick={close} aria-label="Cerrar" />
+    <div role="dialog" aria-modal="true" aria-labelledby="contact-title" className="relative w-full max-w-md rounded-[28px] bg-white p-7 shadow-2xl">
+      <button onClick={close} className="absolute right-5 top-5" aria-label="Cerrar"><Icon name="x" className="size-5" /></button>
+      <span className="grid size-12 place-items-center rounded-2xl bg-[#e4f2ed] text-[var(--brand)]"><Icon name={preview.channel === "whatsapp" ? "message" : "phone"} className="size-6" /></span>
+      <h2 id="contact-title" className="mt-5 text-2xl font-semibold">Contacto preparado</h2>
+      <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{name} · {preview.phonePreview}</p>
+      {preview.channel === "whatsapp" && <div className="mt-4 rounded-2xl bg-[#eef7f3] p-4 text-sm leading-6">{preview.message}</div>}
+      {preview.demo ? <p className="mt-4 text-xs leading-5 text-[#7e8b87]">Este perfil es demostrativo y nunca abre un número real.</p> : preview.url && <a href={preview.url} target="_blank" rel="noreferrer" className="primary-button mt-6 w-full">{preview.channel === "whatsapp" ? "Abrir WhatsApp" : "Iniciar llamada"}</a>}
+      <button onClick={close} className="secondary-button mt-3 w-full">Cerrar</button>
+    </div>
+  </div>;
+}

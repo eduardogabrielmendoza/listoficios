@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[var(--brand)]">Listoficios</p><p className="text-sm text-[var(--muted)]">Administración y moderación</p></div>
           <div className="flex items-center gap-2"><Link href="/admin/moderacion" className="grid size-10 place-items-center rounded-full border border-[var(--line)]" aria-label="Ver alertas"><Icon name="bell" className="size-[18px]"/></Link><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{session.user.name}</p><p className="text-xs capitalize text-[var(--muted)]">{session.user.role}</p></div></div>
         </header>
-        <div className="overflow-x-auto border-b border-[var(--line)] bg-white px-4 py-2 lg:hidden"><AdminNav role={session.user.role} horizontal/></div>
+        <div data-scroll-native className="overflow-x-auto overscroll-contain border-b border-[var(--line)] bg-white px-4 py-2 lg:hidden"><AdminNav role={session.user.role} horizontal/></div>
         {children}
       </div>
     </div>

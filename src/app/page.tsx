@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DiscoveryExperience } from "@/components/discovery-experience";
 import { HomeMotionLoader } from "@/components/home-motion-loader";
-import { HomeProfessionals } from "@/components/home-professionals";
+import { HomeServicesStory } from "@/components/home-services-story";
 import { HomeStory } from "@/components/home-story";
 import { Icon } from "@/components/icons";
 import { categories, professionals } from "@/lib/mock-data";
@@ -29,7 +29,7 @@ export default function Home() {
     <main className="overflow-hidden" data-motion-home>
       <DiscoveryExperience categories={categories} initialProfessionals={professionals} />
       <HomeStory professionals={professionals} />
-      <HomeProfessionals initialProfessionals={professionals} />
+      <HomeServicesStory />
 
       <section id="como-funciona" data-motion-how className="how-journey scroll-mt-20">
         <div className="mx-auto max-w-[1180px]">

@@ -18,8 +18,10 @@ describe("configuración del sitio", () => {
     legacy.schemaVersion = 1;
     delete legacy.motion;
     const migrated = normalizeSiteConfig(legacy);
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(3);
     expect(migrated.motion.enabled).toBe(true);
+    expect(migrated.motion.smoothScrollEnabled).toBe(true);
     expect(migrated.motion.searchText).toContain("pérdida");
+    expect(migrated.motion.servicesTitle).toBe("Servicios cerca tuyo");
   });
 });

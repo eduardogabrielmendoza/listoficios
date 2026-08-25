@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth-provider";
 import { Brand } from "@/components/brand";
+import { useScrollLock } from "@/components/global-scroll-provider";
 import { Icon } from "@/components/icons";
 
 const links = [
@@ -18,13 +19,7 @@ const links = [
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
   const { session, logout } = useAuth();
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
+  useScrollLock(open);
 
   const close = () => setOpen(false);
 
@@ -42,7 +37,7 @@ export function MobileMenu() {
         createPortal(
           <div className="fixed inset-0 z-[100] lg:hidden">
             <button className="absolute inset-0 bg-[rgba(9,32,28,.38)] backdrop-blur-sm" onClick={close} aria-label="Cerrar menú" />
-            <aside className="absolute right-0 top-0 flex h-full w-[min(88vw,360px)] flex-col bg-[var(--paper)] p-6 shadow-2xl">
+            <aside data-scroll-native className="absolute right-0 top-0 flex h-full w-[min(88vw,360px)] flex-col overflow-y-auto overscroll-contain bg-[var(--paper)] p-6 shadow-2xl">
               <div className="flex items-center justify-between">
                 <Brand />
                 <button onClick={close} className="grid size-10 place-items-center rounded-full border border-[var(--line)] bg-white" aria-label="Cerrar menú">

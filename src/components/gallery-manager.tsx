@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useScrollLock } from "@/components/global-scroll-provider";
 import type { MediaKind, PortfolioItem } from "@/lib/api-contracts";
 
 export function GalleryManager({ initial }: { initial: PortfolioItem[] }) {
@@ -11,6 +12,7 @@ export function GalleryManager({ initial }: { initial: PortfolioItem[] }) {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
   const [lightbox, setLightbox] = useState<PortfolioItem | null>(null);
+  useScrollLock(Boolean(lightbox));
   const avatar = items.find((item) => item.kind === "avatar") ?? null;
   const cover = items.find((item) => item.kind === "cover") ?? null;
   const works = useMemo(() => items.filter((item) => item.kind === "work").sort((a, b) => a.sortOrder - b.sortOrder), [items]);
@@ -81,7 +83,7 @@ export function GalleryManager({ initial }: { initial: PortfolioItem[] }) {
 
     {(avatar || cover) && <div className="mt-8 flex flex-wrap gap-3">{avatar && <button type="button" onClick={() => remove(avatar)} className="text-xs font-semibold text-[var(--muted)] hover:text-[#9b392d]">Eliminar foto de perfil</button>}{cover && <button type="button" onClick={() => remove(cover)} className="text-xs font-semibold text-[var(--muted)] hover:text-[#9b392d]">Eliminar portada</button>}</div>}
 
-    {lightbox && <div className="fixed inset-0 z-[110] grid place-items-center bg-[rgba(5,22,19,.82)] p-4" role="dialog" aria-modal="true" aria-label="Vista ampliada"><button className="absolute inset-0" onClick={() => setLightbox(null)} aria-label="Cerrar vista ampliada"/><div className="relative w-full max-w-5xl overflow-hidden rounded-[24px] bg-white"><div className="relative max-h-[78vh] min-h-[300px] w-full"><Image unoptimized src={lightbox.url.replace("variant=gallery", "variant=full")} alt={lightbox.alt} fill sizes="100vw" className="object-contain" /></div><button onClick={() => setLightbox(null)} className="absolute right-4 top-4 rounded-full bg-white px-4 py-2 text-sm font-semibold shadow">Cerrar</button>{lightbox.caption && <p className="p-4 text-sm text-[var(--muted)]">{lightbox.caption}</p>}</div></div>}
+    {lightbox && <div data-scroll-native className="fixed inset-0 z-[110] grid place-items-center overscroll-contain bg-[rgba(5,22,19,.82)] p-4" role="dialog" aria-modal="true" aria-label="Vista ampliada"><button className="absolute inset-0" onClick={() => setLightbox(null)} aria-label="Cerrar vista ampliada"/><div className="relative w-full max-w-5xl overflow-hidden rounded-[24px] bg-white"><div className="relative max-h-[78vh] min-h-[300px] w-full"><Image unoptimized src={lightbox.url.replace("variant=gallery", "variant=full")} alt={lightbox.alt} fill sizes="100vw" className="object-contain" /></div><button onClick={() => setLightbox(null)} className="absolute right-4 top-4 rounded-full bg-white px-4 py-2 text-sm font-semibold shadow">Cerrar</button>{lightbox.caption && <p className="p-4 text-sm text-[var(--muted)]">{lightbox.caption}</p>}</div></div>}
   </div>;
 }
 
