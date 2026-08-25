@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Suspense } from "react";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
+import { NavigationFeedback } from "@/components/navigation-feedback";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { PwaRegister } from "@/components/pwa-register";
-import { getServerSession } from "@/lib/auth-server";
 
 const generalSans = localFont({
   variable: "--font-general-sans", display: "swap",
@@ -26,8 +27,6 @@ export const metadata: Metadata = {
   openGraph: { title: "Listoficios", description: "Profesionales y servicios de Bella Vista.", type: "website", locale: "es_AR" },
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const current = await getServerSession();
-  const initialSession = current ? { accountId: current.user.id, name: current.user.name, email: current.user.email, role: current.user.role } : null;
-  return <html lang="es-AR" data-scroll-behavior="smooth" className={`${generalSans.variable} h-full antialiased`}><body className="flex min-h-full flex-col"><AuthProvider initialSession={initialSession}><SiteHeader /><div className="flex-1">{children}</div><SiteFooter /><PwaRegister/></AuthProvider></body></html>;
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return <html lang="es-AR" data-scroll-behavior="smooth" className={`${generalSans.variable} h-full antialiased`}><body className="flex min-h-full flex-col"><AuthProvider><Suspense fallback={null}><NavigationFeedback/></Suspense><SiteHeader /><div className="flex-1">{children}</div><SiteFooter /><PwaRegister/></AuthProvider></body></html>;
 }

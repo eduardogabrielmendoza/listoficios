@@ -1,3 +1,56 @@
 "use client";
-import Link from "next/link";import { Brand } from "@/components/brand";import { MobileMenu } from "@/components/mobile-menu";import { useAuth } from "@/components/auth-provider";
-export function SiteHeader(){const{session,logout}=useAuth();return <header className="relative z-40 border-b border-[var(--line)] bg-[rgba(247,249,246,.9)] px-4 backdrop-blur-xl sm:px-6 lg:px-8"><div className="mx-auto flex h-[76px] max-w-[1180px] items-center justify-between"><Brand/><nav className="hidden items-center gap-7 text-[13px] font-medium text-[#52635d] md:flex" aria-label="Navegación principal"><Link href="/profesionales">Profesionales</Link><Link href="/servicios">Servicios</Link><Link href="/como-funciona">Cómo funciona</Link><Link href="/ayuda">Ayuda</Link></nav><div className="hidden items-center gap-3 md:flex">{session?<><Link href="/panel" className="grid h-10 place-items-center rounded-full px-4 text-[13px] font-semibold">{session.name.split(" ")[0]} · Mi panel</Link><button onClick={async()=>logout()} className="h-10 rounded-full border border-[var(--line)] px-4 text-[13px] font-medium">Cerrar sesión</button></>:<><Link href="/ingresar" className="grid h-10 place-items-center rounded-full px-4 text-[13px] font-semibold">Ingresar</Link><Link href="/crear-cuenta" className="grid h-10 place-items-center rounded-full bg-[var(--ink)] px-5 text-[13px] font-semibold text-white">Crear cuenta</Link></>}<Link href={session?"/profesionales/crear-perfil":"/crear-cuenta?next=/profesionales/crear-perfil"} className="hidden h-10 place-items-center rounded-full bg-[var(--brand)] px-5 text-[13px] font-semibold text-white lg:grid">Publicar servicio</Link></div><MobileMenu/></div></header>}
+
+import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
+import { Brand } from "@/components/brand";
+import { MobileMenu } from "@/components/mobile-menu";
+
+export function SiteHeader() {
+  const { session, logout, ready } = useAuth();
+
+  return (
+    <header className="relative z-40 border-b border-[var(--line)] bg-[rgba(247,249,246,.9)] px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[76px] max-w-[1180px] items-center justify-between">
+        <Brand />
+        <nav className="hidden items-center gap-7 text-[13px] font-medium text-[#52635d] lg:flex" aria-label="Navegación principal">
+          <Link href="/profesionales">Profesionales</Link>
+          <Link href="/servicios">Servicios</Link>
+          <Link href="/como-funciona">Cómo funciona</Link>
+          <Link href="/ayuda">Ayuda</Link>
+        </nav>
+        <div className="hidden min-w-[310px] items-center justify-end gap-3 lg:flex">
+          {!ready ? (
+            <span className="h-10 w-40 animate-pulse rounded-full bg-[#e5ece8]" />
+          ) : session ? (
+            <>
+              <Link href="/panel" className="grid h-10 place-items-center rounded-full px-4 text-[13px] font-semibold">
+                {session.name.split(" ")[0]} · Mi panel
+              </Link>
+              <button onClick={async () => logout()} className="h-10 rounded-full border border-[var(--line)] px-4 text-[13px] font-medium">
+                Cerrar sesión
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/ingresar" className="grid h-10 place-items-center rounded-full px-4 text-[13px] font-semibold">
+                Ingresar
+              </Link>
+              <Link href="/crear-cuenta" className="grid h-10 place-items-center rounded-full bg-[var(--ink)] px-5 text-[13px] font-semibold text-white">
+                Crear cuenta
+              </Link>
+            </>
+          )}
+          {ready && (
+            <Link
+              href={session ? "/profesionales/crear-perfil" : "/crear-cuenta?next=/profesionales/crear-perfil"}
+              className="hidden h-10 place-items-center rounded-full bg-[var(--brand)] px-5 text-[13px] font-semibold text-white xl:grid"
+            >
+              Publicar servicio
+            </Link>
+          )}
+        </div>
+        <MobileMenu />
+      </div>
+    </header>
+  );
+}

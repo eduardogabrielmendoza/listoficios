@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { PricingMode, ServiceProfile } from "@/lib/app-types";
 import type { MediaKind, PortfolioItem, PublicProfessionalProfile, ServiceListing } from "@/lib/api-contracts";
 import { findProfessional, professionals as mockProfessionals, searchProfessionals } from "@/lib/mock-data";
@@ -99,6 +100,17 @@ async function publishedGraphs() {
   return (data ?? []) as unknown as ProfileGraph[];
 }
 
+const publishedGraphBySlug = cache(async (slug: string) => {
+  const { data, error } = await createAdminClient()
+    .from("professional_profiles")
+    .select(graphSelect)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? data as unknown as ProfileGraph : null;
+});
+
 function applyFilters(entries: ServiceProfile[], filters: DirectoryFilters) {
   const query = filters.query?.trim().toLocaleLowerCase("es-AR") ?? "";
   const filtered = entries.filter((profile) => {
@@ -135,14 +147,8 @@ export async function listProfessionals(filters: DirectoryFilters = {}) {
 
 export async function getProfessionalBySlug(slug: string) {
   if (!supabaseIsConfigured()) return findProfessional(slug) ?? null;
-  const { data, error } = await createAdminClient()
-    .from("professional_profiles")
-    .select(graphSelect)
-    .eq("slug", slug)
-    .eq("status", "published")
-    .maybeSingle();
-  if (error) throw error;
-  return data ? serviceProfile(data as unknown as ProfileGraph) : null;
+  const graph = await publishedGraphBySlug(slug);
+  return graph ? serviceProfile(graph) : null;
 }
 
 export async function getPublicProfile(slug: string): Promise<PublicProfessionalProfile | null> {
@@ -156,15 +162,8 @@ export async function getPublicProfile(slug: string): Promise<PublicProfessional
       isDemo: card.isDemo, avatar: null, cover: null, portfolio: [], services: [{ id: `${card.id}-service`, slug: card.customService ? card.customService.toLowerCase().replace(/\s+/g, "-") : card.categoryId, title: card.customService || card.trade, description: card.description, categories: card.categories, customService: card.customService || null, pricingMode: card.pricingMode, priceAmount: card.priceAmount }],
     };
   }
-  const { data, error } = await createAdminClient()
-    .from("professional_profiles")
-    .select(graphSelect)
-    .eq("slug", slug)
-    .eq("status", "published")
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  const graph = data as unknown as ProfileGraph;
+  const graph = await publishedGraphBySlug(slug);
+  if (!graph) return null;
   const card = serviceProfile(graph);
   const media = graph.portfolio_items.map(mediaItem);
   const listings: ServiceListing[] = graph.services.filter((service) => service.published).map((service) => ({
