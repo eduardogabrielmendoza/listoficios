@@ -94,8 +94,10 @@ test("agenda antigua redirige al panel protegido", async ({ page }) => {
 test("no hay desborde horizontal", async ({ page }) => {
   for (const width of [390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/");
-    const sizes = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
-    expect(sizes.scroll).toBeLessThanOrEqual(sizes.client);
+    for (const route of ["/", "/profesionales/diego-sosa-electricista"]) {
+      await page.goto(route);
+      const sizes = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+      expect(sizes.scroll, `${route} desborda a ${width}px`).toBeLessThanOrEqual(sizes.client);
+    }
   }
 });

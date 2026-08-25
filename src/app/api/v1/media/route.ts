@@ -1,5 +1,7 @@
 import sharp from "sharp";
 import { z } from "zod";
+import { revalidateTag } from "next/cache";
+import { PUBLIC_PROFESSIONALS_TAG } from "@/data/professionals";
 import { requireServerSession } from "@/lib/auth-server";
 import type { MediaKind, PortfolioItem } from "@/lib/api-contracts";
 import { apiData, apiError, requestId } from "@/lib/server/api-response";
@@ -107,6 +109,7 @@ export async function POST(request: Request) {
       : await access.supabase.from("portfolio_items").insert({ ...values, profile_id: access.profile.id, sort_order: kind === "work" ? existing.data?.length ?? 0 : 0 }).select().single();
     if (saved.error) throw saved.error;
     if (previous) await deleteImage(previous.storage_key).catch(() => undefined);
+    revalidateTag(PUBLIC_PROFESSIONALS_TAG, "max");
     return apiData(mediaItem(saved.data as MediaRow), { requestId: id });
   } catch (error) {
     if (storedPublicId) await deleteImage(storedPublicId).catch(() => undefined);
@@ -131,6 +134,7 @@ export async function PATCH(request: Request) {
     .eq("id", item.id)
     .eq("profile_id", access.profile!.id)));
   if (updates.some((result) => result.error)) return apiError("MEDIA_ERROR", "No pudimos ordenar la galería.", 503, id);
+  revalidateTag(PUBLIC_PROFESSIONALS_TAG, "max");
   return apiData({ updated: true }, { requestId: id });
 }
 
@@ -147,6 +151,7 @@ export async function DELETE(request: Request) {
     const deleted = await access.supabase.from("portfolio_items").delete().eq("id", row.data.id);
     if (deleted.error) throw deleted.error;
     await deleteImage(row.data.storage_key).catch(() => undefined);
+    revalidateTag(PUBLIC_PROFESSIONALS_TAG, "max");
     return apiData({ deleted: true }, { requestId: id });
   } catch {
     return apiError("MEDIA_ERROR", "No pudimos borrar la imagen.", 503, id);

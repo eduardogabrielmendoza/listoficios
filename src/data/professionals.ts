@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import type { PricingMode, ServiceProfile } from "@/lib/app-types";
 import type { MediaKind, PortfolioItem, PublicProfessionalProfile, ServiceListing } from "@/lib/api-contracts";
 import { findProfessional, professionals as mockProfessionals, searchProfessionals } from "@/lib/mock-data";
@@ -90,7 +91,9 @@ function serviceProfile(profile: ProfileGraph): ServiceProfile {
   };
 }
 
-async function publishedGraphs() {
+export const PUBLIC_PROFESSIONALS_TAG = "public-professionals";
+
+const publishedGraphs = unstable_cache(async () => {
   const { data, error } = await createAdminClient()
     .from("professional_profiles")
     .select(graphSelect)
@@ -98,9 +101,9 @@ async function publishedGraphs() {
     .order("updated_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as unknown as ProfileGraph[];
-}
+}, ["published-professional-graphs"], { tags: [PUBLIC_PROFESSIONALS_TAG], revalidate: 60 });
 
-const publishedGraphBySlug = cache(async (slug: string) => {
+const loadPublishedGraphBySlug = unstable_cache(async (slug: string) => {
   const { data, error } = await createAdminClient()
     .from("professional_profiles")
     .select(graphSelect)
@@ -109,7 +112,9 @@ const publishedGraphBySlug = cache(async (slug: string) => {
     .maybeSingle();
   if (error) throw error;
   return data ? data as unknown as ProfileGraph : null;
-});
+}, ["published-professional-by-slug"], { tags: [PUBLIC_PROFESSIONALS_TAG], revalidate: 60 });
+
+const publishedGraphBySlug = cache(loadPublishedGraphBySlug);
 
 function applyFilters(entries: ServiceProfile[], filters: DirectoryFilters) {
   const query = filters.query?.trim().toLocaleLowerCase("es-AR") ?? "";

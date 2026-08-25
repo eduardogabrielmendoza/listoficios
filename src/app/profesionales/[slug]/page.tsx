@@ -42,7 +42,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     <section className="border-b border-[var(--line)] bg-[var(--paper)] px-4 pb-9 pt-6 sm:px-6 sm:pb-10 lg:px-8">
       <div className="mx-auto max-w-[1100px]">
         <Link href="/profesionales" className="inline-flex items-center gap-2 text-sm font-medium text-[var(--brand)]"><Icon name="arrow-left" className="size-4"/> Volver al directorio</Link>
-        <div className="relative mt-5 aspect-[16/7] min-h-[180px] overflow-hidden rounded-[24px] bg-[#c9dfd6] sm:mt-7 sm:aspect-[3/1] sm:rounded-[30px]">
+        <div className="relative mt-5 h-[180px] w-full overflow-hidden rounded-[24px] bg-[#c9dfd6] sm:mt-7 sm:h-auto sm:aspect-[3/1] sm:rounded-[30px]">
           {profile.cover ? <Image src={profile.cover.url} alt={profile.cover.alt} fill priority sizes="(max-width: 1200px) 100vw, 1100px" className="object-cover" style={{ objectPosition: `${profile.cover.focalX * 100}% ${profile.cover.focalY * 100}%` }}/> : <><div className="profile-cover-fallback absolute inset-0"/><div className="absolute inset-0 bg-gradient-to-t from-[rgba(8,48,40,.26)] to-transparent"/></>}
           {profile.isDemo && <span className="absolute right-3 top-3 rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-semibold text-[var(--muted)] backdrop-blur">Perfil demostrativo</span>}
         </div>
