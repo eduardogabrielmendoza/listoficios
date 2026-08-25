@@ -135,10 +135,15 @@ create table public.portfolio_items (
   profile_id uuid not null references public.professional_profiles(id) on delete cascade,
   storage_key text not null unique,
   alt text not null default '',
+  caption text not null default '',
+  kind text not null default 'work' check (kind in ('avatar', 'cover', 'work')),
+  focal_x numeric(4,3) not null default 0.5 check (focal_x between 0 and 1),
+  focal_y numeric(4,3) not null default 0.5 check (focal_y between 0 and 1),
   sort_order integer not null default 0,
   width integer not null check (width > 0),
   height integer not null check (height > 0),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table public.favorites (
@@ -258,6 +263,9 @@ create index profile_zones_zone_idx on public.profile_zones(zone_id);
 create index services_profile_idx on public.services(profile_id);
 create index service_categories_category_idx on public.service_categories(category_id);
 create index portfolio_profile_idx on public.portfolio_items(profile_id);
+create unique index portfolio_one_avatar_per_profile_idx on public.portfolio_items(profile_id) where kind = 'avatar';
+create unique index portfolio_one_cover_per_profile_idx on public.portfolio_items(profile_id) where kind = 'cover';
+create index portfolio_profile_kind_order_idx on public.portfolio_items(profile_id, kind, sort_order);
 create index favorites_profile_idx on public.favorites(profile_id);
 create index contacts_profile_created_idx on public.contact_events(profile_id, created_at desc);
 create index contacts_user_idx on public.contact_events(user_id);

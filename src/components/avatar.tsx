@@ -8,10 +8,12 @@ const palettes = {
 export function Avatar({
   initials,
   tone,
+  imageUrl,
   className = "",
 }: {
   initials: string;
   tone: keyof typeof palettes;
+  imageUrl?: string | null;
   className?: string;
 }) {
   const palette = palettes[tone];
@@ -23,7 +25,9 @@ export function Avatar({
       role="img"
       aria-label={`Foto de perfil de ${initials}`}
     >
-      <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
+      {imageUrl ? (
+        <Image src={imageUrl} alt="" fill sizes="(max-width: 640px) 96px, 144px" className="object-cover" />
+      ) : <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
         <circle cx="79" cy="19" r="18" fill="white" opacity=".38" />
         <path d="M15 101c2-28 16-41 35-41s33 13 35 41H15Z" fill={palette.shirt} />
         <path d="M39 56h22v15c-6 5-16 5-22 0V56Z" fill={palette.skin} />
@@ -33,8 +37,9 @@ export function Avatar({
         <circle cx="42" cy="41" r="1.7" fill="#2d2521" />
         <circle cx="58" cy="41" r="1.7" fill="#2d2521" />
         <path d="M44 51c4 3 8 3 12 0" fill="none" stroke="#8d4f3e" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+      </svg>}
       <span className="sr-only">{initials}</span>
     </span>
   );
 }
+import Image from "next/image";

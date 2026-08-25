@@ -15,5 +15,8 @@
 .primary-button { background:var(--ink); color:white; } .primary-button:hover { background:var(--brand); transform:translateY(-1px); } .secondary-button { border:1px solid var(--line); background:white; color:var(--ink); } .secondary-button:hover { border-color:#b9cec7; background:var(--paper); }
 .legal-copy p + p { margin-top:1rem; } .legal-copy a { color:var(--brand); font-weight:500; text-decoration:underline; text-underline-offset:3px; }
 .profile-gallery { background:linear-gradient(145deg,#c9dfd6,#f0cda8); } .profile-gallery-alt { background:linear-gradient(145deg,#ebdfc5,#94b9aa); } .profile-gallery-third { background:linear-gradient(145deg,#b7d9e0,#d9c7e6); }
+.profile-cover-fallback { background:radial-gradient(circle at 72% 20%,rgba(191,241,111,.75),transparent 30%),linear-gradient(125deg,#0f3d34 0%,#18715f 55%,#7faf5f 100%); }
+@media (max-width:639px) { .section-title { font-size:2.15rem; } }
+@media (min-width:640px) { .primary-button.sm\:hidden { display:none!important; } }
 @media (max-width:1023px),(pointer:coarse),(prefers-reduced-motion:reduce) { .ambient-glow { --glow-shift-x:0%; --glow-shift-y:-10%; transition:none; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }

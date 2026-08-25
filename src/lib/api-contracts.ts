@@ -31,7 +31,19 @@ export type ServiceListing = {
   priceAmount: number | null;
 };
 
-export type PortfolioItem = { id: string; url: string; alt: string; width: number; height: number };
+export type MediaKind = "avatar" | "cover" | "work";
+export type PortfolioItem = {
+  id: string;
+  url: string;
+  alt: string;
+  caption: string;
+  width: number;
+  height: number;
+  kind: MediaKind;
+  sortOrder: number;
+  focalX: number;
+  focalY: number;
+};
 export type PublicProfessionalProfile = {
   id: string;
   slug: string;
@@ -44,6 +56,8 @@ export type PublicProfessionalProfile = {
   phonePreview: string | null;
   accentColor: string;
   services: ServiceListing[];
+  avatar: PortfolioItem | null;
+  cover: PortfolioItem | null;
   portfolio: PortfolioItem[];
   rating: number | null;
   reviewCount: number;

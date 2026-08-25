@@ -59,10 +59,21 @@ export async function deleteImage(publicId: string) {
   if (result.result !== "ok" && result.result !== "not found") throw new Error("CLOUDINARY_DELETE_FAILED");
 }
 
-export function getImageUrl(publicId: string) {
+export type ImageVariant = "avatar" | "cover" | "card" | "gallery" | "full";
+
+const variants: Record<ImageVariant, Record<string, string | number>> = {
+  avatar: { width: 480, height: 480, crop: "fill", gravity: "auto" },
+  cover: { width: 1600, height: 640, crop: "fill", gravity: "auto" },
+  card: { width: 720, height: 540, crop: "fill", gravity: "auto" },
+  gallery: { width: 960, height: 720, crop: "fill", gravity: "auto" },
+  full: { width: 1800, crop: "limit" },
+};
+
+export function getImageUrl(publicId: string, variant: ImageVariant = "full") {
   return configureCloudinary().url(publicId, {
     secure: true,
     fetch_format: "auto",
     quality: "auto",
+    ...variants[variant],
   });
 }

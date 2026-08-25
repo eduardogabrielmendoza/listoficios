@@ -51,7 +51,7 @@ export type ServiceView = {
 
 export type ZoneRow = { id: string; slug: string; name: string; description: string; sort_order: number; active: boolean };
 export type CategoryRow = { id: string; slug: string; name: string; description: string; icon: string; sort_order: number; active: boolean };
-export type PortfolioRow = { id: string; profile_id: string; storage_key: string; alt: string; sort_order: number; width: number; height: number; created_at: string };
+export type PortfolioRow = { id: string; profile_id: string; storage_key: string; alt: string; caption?: string; kind?: "avatar" | "cover" | "work"; focal_x?: number; focal_y?: number; sort_order: number; width: number; height: number; created_at: string; updated_at?: string };
 
 export type ProfileGraph = ProfileRow & {
   services: (ServiceRow & { service_categories: { category_id: string; categories: { name: string } | null }[] })[];

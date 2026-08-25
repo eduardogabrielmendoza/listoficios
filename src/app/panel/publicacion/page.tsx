@@ -8,7 +8,7 @@ export default async function PublicationPage() {
   const session = await requireServerSession();
   const data = await getOwnProfile(session.user.id);
   if (!data) return <Empty />;
-  const gallery = await createAdminClient().from("portfolio_items").select("id", { count: "exact" }).eq("profile_id", data.profile.id);
+  const gallery = await createAdminClient().from("portfolio_items").select("id", { count: "exact" }).eq("profile_id", data.profile.id).eq("kind", "work");
   if (gallery.error) throw gallery.error;
   const checks = [Boolean(data.profile.bio.length >= 100), data.zones.length > 0, data.services.length > 0, (gallery.count ?? 0) >= 3];
   const completion = Math.round(checks.filter(Boolean).length / checks.length * 100);

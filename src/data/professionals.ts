@@ -1,5 +1,5 @@
 import type { PricingMode, ServiceProfile } from "@/lib/app-types";
-import type { PublicProfessionalProfile, ServiceListing } from "@/lib/api-contracts";
+import type { MediaKind, PortfolioItem, PublicProfessionalProfile, ServiceListing } from "@/lib/api-contracts";
 import { findProfessional, professionals as mockProfessionals, searchProfessionals } from "@/lib/mock-data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { supabaseIsConfigured } from "@/lib/supabase/config";
@@ -24,6 +24,22 @@ const graphSelect = `
   portfolio_items(*)
 `;
 
+function mediaItem(item: ProfileGraph["portfolio_items"][number]): PortfolioItem {
+  const kind = (item.kind ?? "work") as MediaKind;
+  return {
+    id: item.id,
+    url: `/media/${item.id}?variant=${kind === "work" ? "gallery" : kind}`,
+    alt: item.alt,
+    caption: item.caption ?? "",
+    kind,
+    sortOrder: item.sort_order,
+    focalX: Number(item.focal_x ?? 0.5),
+    focalY: Number(item.focal_y ?? 0.5),
+    width: item.width,
+    height: item.height,
+  };
+}
+
 function mockResult(filters: DirectoryFilters) {
   const data = searchProfessionals({
     query: filters.query,
@@ -43,6 +59,7 @@ function serviceProfile(profile: ProfileGraph): ServiceProfile {
   const reviews = profile.reviews.filter((review) => review.status === "published");
   const rating = reviews.length ? reviews.reduce((total, review) => total + review.rating, 0) / reviews.length : 0;
   const initials = profile.display_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  const avatar = profile.portfolio_items.find((item) => item.kind === "avatar");
   return {
     id: profile.id,
     slug: profile.slug,
@@ -66,6 +83,7 @@ function serviceProfile(profile: ProfileGraph): ServiceProfile {
     responseTime: "Contacto directo por WhatsApp",
     skills: [...new Set([...activeServices.map((service) => service.title), ...categoryNames])],
     avatarTone: tones.has(profile.accent_color) ? profile.accent_color as ServiceProfile["avatarTone"] : "forest",
+    avatarUrl: avatar ? `/media/${avatar.id}?variant=avatar` : null,
     featured: profile.views_count > 10,
     isDemo: profile.is_demo,
   };
@@ -135,7 +153,7 @@ export async function getPublicProfile(slug: string): Promise<PublicProfessional
       id: card.id, slug: card.slug, displayName: card.name, headline: card.trade, bio: card.description,
       experienceYears: card.experienceYears, zones: card.zones, serviceMode: card.serviceMode,
       phonePreview: card.phonePreview, accentColor: card.avatarTone, rating: card.rating, reviewCount: card.reviews,
-      isDemo: card.isDemo, portfolio: [], services: [{ id: `${card.id}-service`, slug: card.customService ? card.customService.toLowerCase().replace(/\s+/g, "-") : card.categoryId, title: card.customService || card.trade, description: card.description, categories: card.categories, customService: card.customService || null, pricingMode: card.pricingMode, priceAmount: card.priceAmount }],
+      isDemo: card.isDemo, avatar: null, cover: null, portfolio: [], services: [{ id: `${card.id}-service`, slug: card.customService ? card.customService.toLowerCase().replace(/\s+/g, "-") : card.categoryId, title: card.customService || card.trade, description: card.description, categories: card.categories, customService: card.customService || null, pricingMode: card.pricingMode, priceAmount: card.priceAmount }],
     };
   }
   const { data, error } = await createAdminClient()
@@ -148,6 +166,7 @@ export async function getPublicProfile(slug: string): Promise<PublicProfessional
   if (!data) return null;
   const graph = data as unknown as ProfileGraph;
   const card = serviceProfile(graph);
+  const media = graph.portfolio_items.map(mediaItem);
   const listings: ServiceListing[] = graph.services.filter((service) => service.published).map((service) => ({
     id: service.id,
     slug: service.slug,
@@ -163,7 +182,9 @@ export async function getPublicProfile(slug: string): Promise<PublicProfessional
     experienceYears: card.experienceYears, zones: card.zones, serviceMode: card.serviceMode,
     phonePreview: card.phonePreview, accentColor: card.avatarTone, rating: card.rating || null, reviewCount: card.reviews,
     isDemo: card.isDemo,
-    portfolio: graph.portfolio_items.sort((a, b) => a.sort_order - b.sort_order).map((item) => ({ id: item.id, url: `/media/${item.id}`, alt: item.alt, width: item.width, height: item.height })),
+    avatar: media.find((item) => item.kind === "avatar") ?? null,
+    cover: media.find((item) => item.kind === "cover") ?? null,
+    portfolio: media.filter((item) => item.kind === "work").sort((a, b) => a.sortOrder - b.sortOrder),
     services: listings,
   };
 }

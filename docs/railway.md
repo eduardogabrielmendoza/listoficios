@@ -8,6 +8,8 @@ Railway alojará únicamente Next.js. Supabase administrará cuentas y datos por
 2. Creá o configurá Cloudinary y copiá `Cloud name`, `API key` y `API secret`.
 3. Rotá cualquier secreto que haya aparecido en una captura o mensaje público.
 
+Si ya ejecutaste `setup.sql` y Listoficios está funcionando, **no vuelvas a ejecutarlo**. Para incorporar foto de perfil, portada y la nueva galería sin borrar datos, ejecutá solamente [`supabase/migrations/0001_profile_media.sql`](../supabase/migrations/0001_profile_media.sql) desde el SQL Editor de Supabase.
+
 ## 2. Variables del servicio web
 
 En `Variables` del servicio de Listoficios cargá exactamente:
@@ -58,6 +60,8 @@ En Railway, eliminá manualmente cualquier `Pre-deploy Command` que hayas agrega
 5. Revisá `Deploy Logs`: ya no debe aparecer `db:check`, `db:migrate` ni una conexión PostgreSQL.
 6. Abrí `https://listoficios.up.railway.app/api/health`.
 7. Probá registro, ingreso, publicación y galería.
+
+En la galería comprobá por separado la foto de perfil, la portada y una imagen de trabajo. Cloudinary conserva el original optimizado y Listoficios solicita un recorte distinto para avatar, portada, tarjeta, galería y vista ampliada.
 
 `/api/health` es una comprobación de vida de Next.js y siempre responde `200` cuando el contenedor está listo. Para comprobar también Supabase, abrí:
 
