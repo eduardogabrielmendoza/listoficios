@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { supabaseIsConfigured } from "@/lib/supabase/config";
-import { defaultSiteConfig, siteConfigSchema, type SiteConfig } from "@/lib/site-config";
+import { defaultSiteConfig, normalizeSiteConfig, siteConfigSchema, type SiteConfig } from "@/lib/site-config";
 
 export const SITE_CONFIG_TAG = "site-config";
 
@@ -15,8 +15,7 @@ const loadPublishedConfig = unstable_cache(async (): Promise<SiteConfig> => {
     .eq("status", "published")
     .maybeSingle();
   if (error || !data) return defaultSiteConfig;
-  const parsed = siteConfigSchema.safeParse(data.config);
-  return parsed.success ? parsed.data : defaultSiteConfig;
+  return normalizeSiteConfig(data.config);
 }, ["published-site-config"], { tags: [SITE_CONFIG_TAG], revalidate: 300 });
 
 export async function getPublicSiteConfig() {
@@ -36,13 +35,13 @@ export async function getOrCreateDraft(userId: string) {
   const supabase = createAdminClient();
   const draft = await supabase.from("site_config_versions").select("*").eq("status", "draft").maybeSingle();
   if (draft.error) throw draft.error;
-  if (draft.data) return draft.data as ConfigRow;
+  if (draft.data) return { ...draft.data, config: normalizeSiteConfig(draft.data.config) } as ConfigRow;
   const published = await supabase.from("site_config_versions").select("config, version").eq("status", "published").maybeSingle();
   if (published.error) throw published.error;
   const inserted = await supabase.from("site_config_versions").insert({
     version: Number(published.data?.version ?? 0) + 1,
     status: "draft",
-    config: published.data?.config ?? defaultSiteConfig,
+    config: normalizeSiteConfig(published.data?.config),
     created_by: userId,
     change_note: "Borrador de configuración",
   }).select().single();
@@ -52,8 +51,9 @@ export async function getOrCreateDraft(userId: string) {
 
 export async function saveSiteDraft(userId: string, config: SiteConfig, note: string) {
   const draft = await getOrCreateDraft(userId);
+  const parsed = siteConfigSchema.parse(normalizeSiteConfig(config));
   const { data, error } = await createAdminClient().from("site_config_versions").update({
-    config,
+    config: parsed,
     change_note: note,
     updated_at: new Date().toISOString(),
   }).eq("id", draft.id).eq("status", "draft").select().single();
@@ -65,7 +65,7 @@ export async function publishSiteDraft(userId: string) {
   const supabase = createAdminClient();
   const draft = await supabase.from("site_config_versions").select("*").eq("status", "draft").maybeSingle();
   if (draft.error || !draft.data) throw draft.error ?? new Error("DRAFT_REQUIRED");
-  const parsed = siteConfigSchema.parse(draft.data.config);
+  const parsed = siteConfigSchema.parse(normalizeSiteConfig(draft.data.config));
   const current = await supabase.from("site_config_versions").select("id").eq("status", "published").maybeSingle();
   if (current.error) throw current.error;
   if (current.data) {
@@ -88,7 +88,7 @@ export async function restoreSiteVersion(userId: string, versionId: string) {
   const source = await supabase.from("site_config_versions").select("config").eq("id", versionId).maybeSingle();
   if (source.error || !source.data) throw source.error ?? new Error("NOT_FOUND");
   const draft = await getOrCreateDraft(userId);
-  const parsed = siteConfigSchema.parse(source.data.config);
+  const parsed = siteConfigSchema.parse(normalizeSiteConfig(source.data.config));
   const result = await supabase.from("site_config_versions").update({
     config: parsed,
     change_note: "Restaurado desde una versión anterior",

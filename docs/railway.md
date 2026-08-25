@@ -16,8 +16,11 @@ Si la aplicacion ya esta funcionando, no vuelvas a ejecutar `setup.sql`. Desde S
 
 1. [`supabase/migrations/0001_profile_media.sql`](../supabase/migrations/0001_profile_media.sql), solamente si aun no fue aplicada.
 2. [`supabase/migrations/0002_admin_cms_moderation.sql`](../supabase/migrations/0002_admin_cms_moderation.sql).
+3. [`supabase/migrations/0003_home_motion.sql`](../supabase/migrations/0003_home_motion.sql).
 
 La migracion `0002` es incremental: conserva cuentas, perfiles, servicios e imagenes. Agrega roles, cola de moderacion, reglas, revision manual de imagenes, CMS versionado y auditoria. Al terminar debe devolver una configuracion publicada y los perfiles existentes como aprobados.
+
+La migración `0003` conserva todo el historial del CMS, actualiza su esquema y agrega el interruptor y los textos de la narrativa animada del home.
 
 ## 2. Variables del servicio web
 

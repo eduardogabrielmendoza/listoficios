@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultSiteConfig, siteConfigSchema } from "@/lib/site-config";
+import { defaultSiteConfig, normalizeSiteConfig, siteConfigSchema } from "@/lib/site-config";
 
 describe("configuración del sitio", () => {
   it("acepta la configuración inicial", () => {
@@ -11,5 +11,15 @@ describe("configuración del sitio", () => {
     invalid.theme.brand = "red";
     invalid.home.primaryCtaHref = "https://sitio-ajeno.example";
     expect(siteConfigSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("actualiza una configuración anterior con valores seguros de movimiento", () => {
+    const legacy = structuredClone(defaultSiteConfig) as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 1;
+    delete legacy.motion;
+    const migrated = normalizeSiteConfig(legacy);
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.motion.enabled).toBe(true);
+    expect(migrated.motion.searchText).toContain("pérdida");
   });
 });
