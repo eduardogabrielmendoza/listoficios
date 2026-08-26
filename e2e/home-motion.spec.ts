@@ -103,19 +103,20 @@ test("las rutas se trazan de forma progresiva y reversible", async ({ page }, te
   expect(totals.at(-1) ?? 0).toBeGreaterThan((totals[0] ?? 0) + 0.5);
   expect(samples.some((sample) => sample.some((progress) => progress > 0.08 && progress < 0.92))).toBe(true);
   totals.slice(1).forEach((total, index) => expect(total).toBeGreaterThanOrEqual(totals[index] - 0.08));
-  const closedRoutes = await page.locator("[data-services-map-path]").evaluateAll((paths) => paths.map((path) => {
+  const routeMasks = await page.locator("[data-services-map-path]").evaluateAll((paths) => paths.map((path) => {
     const svgPath = path as SVGPathElement;
-    const start = svgPath.getPointAtLength(0);
-    const end = svgPath.getPointAtLength(svgPath.getTotalLength());
-    return Math.hypot(start.x - end.x, start.y - end.y);
+    const dashLength = Number.parseFloat(getComputedStyle(svgPath).strokeDasharray) || 0;
+    return dashLength - svgPath.getTotalLength();
   }));
-  expect(closedRoutes.every((distance) => distance < 0.5)).toBe(true);
+  expect(routeMasks.every((extraLength) => extraLength >= 5)).toBe(true);
 
   const trust = page.locator("[data-motion-trust]");
   const trustRange = await trust.evaluate((element) => {
     const top = element.getBoundingClientRect().top + scrollY;
-    return { start: top - innerHeight * 0.82, end: top + element.getBoundingClientRect().height - innerHeight * 0.6 };
+    const height = element.getBoundingClientRect().height;
+    return { start: top - innerHeight * 0.76, end: top + height - innerHeight * 0.72, height, viewport: innerHeight };
   });
+  expect(trustRange.end - trustRange.start).toBeLessThan(trustRange.height + trustRange.viewport * 0.08);
   const trustProgress = async () => page.locator("[data-motion-trust-path]").evaluate((path) => {
     const svgPath = path as SVGPathElement;
     return 1 - (Number.parseFloat(getComputedStyle(svgPath).strokeDashoffset) || 0) / svgPath.getTotalLength();

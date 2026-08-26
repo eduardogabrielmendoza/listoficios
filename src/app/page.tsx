@@ -56,7 +56,17 @@ export default function Home() {
         </div>
       </section>
 
-      <section data-motion-final className="px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28"><div className="relative mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-8 overflow-hidden rounded-[34px] bg-[var(--lime)] p-8 sm:p-10 lg:flex-row lg:items-center lg:p-14"><div data-motion-final-circle className="absolute -right-10 -top-24 size-72 rounded-full border-[50px] border-white/25" /><div data-motion-final-content className="relative max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[.15em] text-[#456c21]">¿Tenés un oficio?</p><h2 className="mt-3 text-3xl font-semibold leading-tight tracking-[-.045em] sm:text-4xl">Tu próximo cliente puede estar a pocas cuadras.</h2><p className="mt-4 max-w-xl text-sm leading-6 text-[#42602c] sm:text-base">Publicá lo que hacés y dejá que Bella Vista te encuentre.</p></div><Link data-motion-final-content href="/crear-cuenta?next=/profesionales/crear-perfil" className="primary-button relative">Publicar mi servicio <Icon name="arrow-right" className="size-4" /></Link></div></section>
+      <section data-motion-final className="home-final-section">
+        <div className="home-final-card">
+          <div data-motion-final-circle className="home-final-circle" />
+          <div data-motion-final-content className="home-final-content">
+            <p className="home-final-kicker">¿Tenés un oficio?</p>
+            <h2>Tu próximo cliente puede estar a pocas cuadras.</h2>
+            <p>Publicá lo que hacés y dejá que Bella Vista te encuentre.</p>
+          </div>
+          <Link data-motion-final-content href="/crear-cuenta?next=/profesionales/crear-perfil" className="primary-button home-final-button">Publicar mi servicio <Icon name="arrow-right" className="size-4" /></Link>
+        </div>
+      </section>
       <HomeMotionLoader />
     </main>
   );

@@ -13,21 +13,21 @@ const trades: Array<{ icon: IconName; label: string }> = [
   { icon: "brick", label: "Albañilería" },
   { icon: "leaf", label: "Jardinería" },
 ];
-const desktopRoute = "M260 340A160 145 0 0 1 108 240A160 145 0 0 1 166 78A160 145 0 0 1 354 78A160 145 0 0 1 412 240A160 145 0 0 1 260 340";
+const desktopRoute = "M270 344C210 340 140 326 92 278C75 225 118 145 184 112C248 80 300 166 350 128C395 96 438 134 428 206C420 260 382 300 322 318";
 const desktopZones = [
-  { name: "Villa Nueva", x: 108, y: 240 },
-  { name: "Centro", x: 166, y: 78 },
-  { name: "Los Pinos", x: 354, y: 78 },
-  { name: "Santa Rita", x: 412, y: 240 },
-  { name: "Alrededores", x: 260, y: 340 },
+  { name: "Villa Nueva", x: 92, y: 278 },
+  { name: "Centro", x: 184, y: 112 },
+  { name: "Los Pinos", x: 350, y: 128 },
+  { name: "Santa Rita", x: 428, y: 206 },
+  { name: "Alrededores", x: 322, y: 318 },
 ];
-const mobileRoute = "M160 350A120 150 0 0 1 46 246A120 150 0 0 1 89 79A120 150 0 0 1 231 79A120 150 0 0 1 274 246A120 150 0 0 1 160 350";
+const mobileRoute = "M164 360C108 350 62 318 52 274C46 208 82 130 122 96C164 70 182 158 220 130C264 98 290 138 280 206C272 270 242 314 198 336";
 const mobileZones = [
-  { name: "Villa Nueva", x: 46, y: 246 },
-  { name: "Centro", x: 89, y: 79 },
-  { name: "Los Pinos", x: 231, y: 79 },
-  { name: "Santa Rita", x: 274, y: 246 },
-  { name: "Alrededores", x: 160, y: 350 },
+  { name: "Villa Nueva", x: 52, y: 274 },
+  { name: "Centro", x: 122, y: 96 },
+  { name: "Los Pinos", x: 220, y: 130 },
+  { name: "Santa Rita", x: 280, y: 206 },
+  { name: "Alrededores", x: 198, y: 336 },
 ];
 
 export function HomeServicesStory() {
@@ -87,12 +87,22 @@ export function HomeServicesStory() {
               <div className="services-zone-map" aria-label="Mapa ilustrativo de cobertura en Bella Vista">
                 <div className="services-map-grid" aria-hidden="true" />
                 <svg className="services-zone-svg services-zone-svg-desktop" viewBox="0 0 520 390" fill="none" aria-hidden="true">
+                  <g className="services-map-roads">
+                    <path d="M18 86C112 130 178 48 274 106S426 178 510 132" />
+                    <path d="M32 350C130 296 202 324 286 246S414 174 510 218" />
+                    <path d="M252 4C232 86 280 145 250 224S218 320 232 390" />
+                  </g>
                   <path className="services-map-path-shadow" d={desktopRoute} />
                   <path data-services-map-path d={desktopRoute} />
                   <g data-services-map-center className="services-map-center" transform="translate(260 195)"><circle r="39" /><circle r="27" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
                   {desktopZones.map((zone, index) => <g data-services-map-node data-services-map-leg={index} key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="12" /><circle r="4" className="services-map-node-core" /><text y="28">{zone.name}</text></g>)}
                 </svg>
                 <svg className="services-zone-svg services-zone-svg-mobile" viewBox="0 0 320 400" fill="none" aria-hidden="true">
+                  <g className="services-map-roads">
+                    <path d="M8 112C76 148 124 76 180 126S260 178 316 142" />
+                    <path d="M6 334C74 288 126 326 180 256S256 216 316 244" />
+                    <path d="M154 4C136 92 180 150 154 226S132 332 146 398" />
+                  </g>
                   <path className="services-map-path-shadow" d={mobileRoute} />
                   <path data-services-map-path d={mobileRoute} />
                   <g data-services-map-center className="services-map-center" transform="translate(160 195)"><circle r="38" /><circle r="26" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>

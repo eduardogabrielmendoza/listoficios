@@ -156,8 +156,8 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
       const trustTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: "[data-motion-trust]",
-          start: "top 82%",
-          end: "bottom 60%",
+          start: "top 76%",
+          end: "bottom 72%",
           scrub: true,
           invalidateOnRefresh: true,
           onRefreshInit: () => {
@@ -172,7 +172,7 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         .to(trustNodes[1], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }, "-=0.08")
         .to(trustPath, { strokeDashoffset: 0, duration: 0.65, ease: "none" })
         .to(trustNodes[2], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }, "-=0.08")
-        .to({}, { duration: 0.2 });
+        .to({}, { duration: 0.08 });
     }
     gsap.from("[data-motion-final-circle]", { scale: 0.28, opacity: 0, ease: "none", scrollTrigger: { trigger: "[data-motion-final]", start: "top 85%", end: "center 60%", scrub: true } });
     reveal("[data-motion-final-content]", "[data-motion-final]", 0.1);
