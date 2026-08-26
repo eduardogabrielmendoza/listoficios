@@ -49,10 +49,36 @@ test("la narrativa y el mapa completan sus escenas antes de liberar el contenido
     await expect.poll(() => servicesSticky.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
   } else {
     await expect(page.locator("html")).toHaveAttribute("data-global-scroll", "native");
-    await expect.poll(() => storySticky.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
-    await expect.poll(() => servicesSticky.evaluate((element) => getComputedStyle(element).position)).not.toBe("fixed");
-    await page.locator("[data-services-scene]").last().scrollIntoViewIfNeeded();
-    await expect(page.locator("[data-services-scene]").last()).toBeVisible();
+    await expect(storySticky.locator("xpath=..")).toHaveClass(/pin-spacer/);
+    const storyTop = await page.locator("[data-motion-story]").evaluate((element) => element.getBoundingClientRect().top + scrollY);
+    const storyProgressBefore = await page.locator("[data-story-progress]").evaluate((element) => getComputedStyle(element).transform);
+    await page.evaluate((top) => scrollTo(0, top + 920), storyTop);
+    await expect.poll(() => page.locator("[data-story-progress]").evaluate((element) => getComputedStyle(element).transform)).not.toBe(storyProgressBefore);
+
+    const servicesTop = await servicesSticky.evaluate((element) => element.getBoundingClientRect().top + scrollY);
+    await expect(servicesSticky.locator("xpath=..")).toHaveClass(/pin-spacer/);
+    const servicesProgressBefore = await page.locator("[data-services-progress]").evaluate((element) => getComputedStyle(element).transform);
+    await page.evaluate((top) => scrollTo(0, top + 920), servicesTop);
+    await expect.poll(() => page.locator("[data-services-progress]").evaluate((element) => getComputedStyle(element).transform)).not.toBe(servicesProgressBefore);
+  }
+});
+
+test("el servicio del hero permanece contenido y cambia sin duplicarse", async ({ page }, testInfo) => {
+  await page.goto("/");
+  const compact = page.locator("[data-hero-service-compact]");
+  const desktop = page.locator("[data-hero-service-card]");
+  await expect(testInfo.project.name === "desktop" ? desktop : compact).toBeVisible();
+  await expect(testInfo.project.name === "desktop" ? compact : desktop).toBeHidden();
+  const overflow = await (testInfo.project.name === "desktop" ? desktop : compact).evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const child = element.firstElementChild?.getBoundingClientRect();
+    return child ? Math.max(0, child.right - box.right, box.left - child.left) : 0;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+  if (testInfo.project.name === "desktop") {
+    const trade = desktop.locator(".hero-service-swap p").first();
+    const initialTrade = await trade.textContent();
+    await expect.poll(() => trade.textContent(), { timeout: 6_000 }).not.toBe(initialTrade);
   }
 });
 
@@ -70,6 +96,9 @@ test("comparación, cobertura y confianza conservan geometría segura", async ({
   }
 
   await page.locator(".services-zones-scene").scrollIntoViewIfNeeded();
+  await expect(page.locator("[data-services-map-path]")).toHaveCount(10);
+  const pathCommands = await page.locator("[data-services-map-path]").evaluateAll((paths) => paths.map((path) => (path.getAttribute("d")?.match(/M/g) ?? []).length));
+  expect(pathCommands.every((count) => count === 1)).toBe(true);
   expect(await visibleSiblingCollisions(page, ".services-map-node"), "nodos de cobertura").toBe(0);
 
   await page.locator("[data-motion-trust]").scrollIntoViewIfNeeded();
@@ -126,10 +155,15 @@ test("los segmentos conservan gaps y ancho seguro en los breakpoints objetivo", 
       const boxes = selectors.map((selector) => document.querySelector<HTMLElement>(selector)?.getBoundingClientRect()).filter(Boolean) as DOMRect[];
       return {
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        internalOverflow: Array.from(document.querySelectorAll<HTMLElement>("[data-motion-home] *")).filter((element) => {
+          const style = getComputedStyle(element);
+          return ["auto", "scroll"].includes(style.overflowX) && element.scrollWidth > element.clientWidth + 1;
+        }).length,
         collisions: boxes.slice(1).filter((box, index) => box.top < boxes[index].bottom - 1).length,
       };
     });
     expect(result.overflow, `overflow horizontal a ${width}px`).toBeLessThanOrEqual(1);
+    expect(result.internalOverflow, `contenedores laterales a ${width}px`).toBe(0);
     expect(result.collisions, `secciones superpuestas a ${width}px`).toBe(0);
   }
 });

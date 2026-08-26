@@ -16,7 +16,7 @@ function reveal(selector: string, trigger: string, stagger = 0.08) {
 }
 
 function drawPath(path: SVGPathElement, trigger: string, start: string, end: string) {
-  const length = path.dataset.pathNormalized === "true" ? 1 : path.getTotalLength();
+  const length = path.getTotalLength();
   gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
   gsap.to(path, { strokeDashoffset: 0, ease: "none", scrollTrigger: { trigger, start, end, scrub: true } });
 }
@@ -58,19 +58,22 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
     const serviceScenes = gsap.utils.toArray<HTMLElement>("[data-services-scene]");
     const serviceDots = gsap.utils.toArray<HTMLElement>("[data-services-dot]");
     const serviceMapPaths = gsap.utils.toArray<SVGPathElement>("[data-services-map-path]");
-    const serviceMapNodes = gsap.utils.toArray<SVGGElement>("[data-services-map-node], [data-services-map-center]");
+    const serviceMapNodes = gsap.utils.toArray<SVGGElement>("[data-services-map-node]");
+    const serviceMapCenters = gsap.utils.toArray<SVGGElement>("[data-services-map-center]");
     if (services && servicesSticky && serviceScenes.length) {
       gsap.from("[data-services-intro-copy]", { y: 34, opacity: 0, duration: 0.75, ease: "power3.out", scrollTrigger: { trigger: "[data-services-intro]", start: "top 84%", toggleActions: "play none none reverse" } });
-      if (mode === "desktop") {
         gsap.set(serviceScenes, { autoAlpha: 0, y: 42, scale: 0.98 });
         gsap.set(serviceScenes[0], { autoAlpha: 1, y: 0, scale: 1 });
         gsap.set(serviceDots[0], { color: "var(--ink)", opacity: 1 });
         serviceMapPaths.forEach((path) => {
-          const length = path.dataset.pathNormalized === "true" ? 1 : path.getTotalLength();
+          const length = path.getTotalLength();
           gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
         });
         gsap.set(serviceMapNodes, { autoAlpha: 0, scale: 0.72, transformOrigin: "center" });
-        const servicesDistance = () => Math.max(motionTokens.services.minimumDistance, window.innerHeight * motionTokens.services.screens);
+        gsap.set(serviceMapCenters, { autoAlpha: 0, scale: 0.82, transformOrigin: "center" });
+        const servicesDistance = () => mode === "desktop"
+          ? Math.max(motionTokens.services.minimumDistance, window.innerHeight * motionTokens.services.screens)
+          : Math.max(motionTokens.services.mobileMinimumDistance, window.innerHeight * motionTokens.services.mobileScreens);
         const servicesTimeline = gsap.timeline({
           defaults: { ease: "power2.inOut" },
           scrollTrigger: {
@@ -101,9 +104,15 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
             .to(serviceDots[index - 1], { opacity: 0.38, color: "var(--muted)", duration: 0.12 }, "<")
             .to(serviceDots[index], { opacity: 1, color: "var(--ink)", duration: 0.12 }, "<");
           if (index === 2 && serviceMapPaths.length) {
-            servicesTimeline
-              .to(serviceMapPaths, { strokeDashoffset: 0, duration: 0.46, ease: "none" }, "<0.08")
-              .to(serviceMapNodes, { autoAlpha: 1, scale: 1, stagger: 0.045, duration: 0.28, ease: "power2.out" }, "<0.12");
+            servicesTimeline.to(serviceMapCenters, { autoAlpha: 1, scale: 1, duration: 0.22, ease: "power2.out" }, "<0.08");
+            for (let leg = 0; leg < 5; leg += 1) {
+              const paths = serviceMapPaths.filter((path) => path.dataset.servicesMapLeg === String(leg));
+              const nodes = serviceMapNodes.filter((node) => node.dataset.servicesMapLeg === String(leg));
+              servicesTimeline
+                .to(paths, { strokeDashoffset: 0, duration: 0.34, ease: "none" })
+                .to(nodes, { autoAlpha: 1, scale: 1, duration: 0.16, ease: "power2.out" }, "-=0.03")
+                .to({}, { duration: 0.07 });
+            }
           }
           servicesTimeline.to({}, { duration: index === serviceScenes.length - 1 ? 0.58 : 0.24 });
         });
@@ -111,16 +120,6 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         const servicesDuration = servicesTimeline.duration();
         servicesTimeline.fromTo("[data-services-progress]", { scaleX: 0 }, { scaleX: 1, transformOrigin: "left center", duration: servicesDuration, ease: "none" }, 0);
         servicesTimeline.to(".services-orbit", { rotate: (index) => index ? -95 : 110, duration: servicesDuration, ease: "none" }, 0);
-      } else {
-        serviceScenes.forEach((scene) => {
-          const visualPieces = Array.from(scene.querySelectorAll<HTMLElement>("[data-services-piece]")).filter((item) => !item.closest(".services-story-copy"));
-          const timeline = gsap.timeline({ scrollTrigger: { trigger: scene, start: "top 80%", toggleActions: "play none none reverse" } });
-          timeline.from(scene.querySelectorAll(".services-story-copy > *"), { y: 18, opacity: 0, stagger: 0.055, duration: 0.34, ease: "power3.out" });
-          if (visualPieces.length) timeline.from(visualPieces, { y: 18, opacity: 0, scale: 0.985, stagger: 0.055, duration: 0.32, ease: "power3.out" }, "-=0.16");
-        });
-        serviceMapPaths.forEach((path) => drawPath(path, ".services-zones-scene", "top 82%", "center 52%"));
-        gsap.from(serviceMapNodes, { autoAlpha: 0, scale: 0.78, transformOrigin: "center", stagger: 0.055, duration: 0.35, ease: "power2.out", scrollTrigger: { trigger: ".services-zones-scene", start: "top 72%", toggleActions: "play none none reverse" } });
-      }
     }
 
     const howPaths = gsap.utils.toArray<SVGPathElement>("[data-motion-how-path]");
@@ -133,7 +132,29 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
       .from(".how-preview", { y: 16, opacity: 0, stagger: 0.1, duration: 0.3 }, "-=0.25");
 
     const trustPath = document.querySelector<SVGPathElement>("[data-motion-trust-path]");
-    if (trustPath) { drawPath(trustPath, "[data-motion-trust]", "top 72%", "center 45%"); reveal("[data-motion-trust-node]", "[data-motion-trust]", 0.16); }
+    const trustNodes = gsap.utils.toArray<HTMLElement>("[data-motion-trust-node]");
+    if (trustPath && trustNodes.length) {
+      const trustLength = trustPath.getTotalLength();
+      gsap.set(trustPath, { strokeDasharray: trustLength, strokeDashoffset: trustLength });
+      gsap.set(trustNodes, { autoAlpha: 0, y: 18 });
+      const trustTimeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: "[data-motion-trust]",
+          start: "top 78%",
+          end: "bottom 32%",
+          scrub: 0.55,
+          invalidateOnRefresh: true,
+          fastScrollEnd: true,
+        },
+      });
+      trustTimeline
+        .to(trustNodes[0], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" })
+        .to(trustPath, { strokeDashoffset: trustLength * 0.5, duration: 0.65, ease: "none" })
+        .to(trustNodes[1], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }, "-=0.08")
+        .to(trustPath, { strokeDashoffset: 0, duration: 0.65, ease: "none" })
+        .to(trustNodes[2], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }, "-=0.08")
+        .to({}, { duration: 0.2 });
+    }
     gsap.from("[data-motion-final-circle]", { scale: 0.28, opacity: 0, ease: "none", scrollTrigger: { trigger: "[data-motion-final]", start: "top 85%", end: "center 60%", scrub: true } });
     reveal("[data-motion-final-content]", "[data-motion-final]", 0.1);
 
@@ -142,11 +163,12 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
     const scenes = gsap.utils.toArray<HTMLElement>("[data-story-scene]");
     const dots = gsap.utils.toArray<HTMLElement>("[data-story-dot]");
     if (story && sticky && scenes.length) {
-      if (mode === "desktop") {
         gsap.set(scenes, { autoAlpha: 0, y: 34, scale: 0.985 });
         gsap.set(scenes[0], { autoAlpha: 1, y: 0, scale: 1 });
         gsap.set(dots[0], { scale: 1.35, backgroundColor: "var(--accent)" });
-        const scrollDistance = () => Math.max(motionTokens.story.minimumDistance, window.innerHeight * motionTokens.story.screens);
+        const scrollDistance = () => mode === "desktop"
+          ? Math.max(motionTokens.story.minimumDistance, window.innerHeight * motionTokens.story.screens)
+          : Math.max(motionTokens.story.mobileMinimumDistance, window.innerHeight * motionTokens.story.mobileScreens);
         const storyTimeline = gsap.timeline({
           defaults: { ease: "power2.inOut" },
           scrollTrigger: {
@@ -180,15 +202,6 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         const duration = storyTimeline.duration();
         storyTimeline.fromTo("[data-story-progress]", { scaleX: 0 }, { scaleX: 1, transformOrigin: "left center", ease: "none", duration }, 0);
         storyTimeline.to("[data-story-orbit]", { rotate: (index) => index % 2 ? -80 : 95, x: (index) => index * 18 - 12, y: (index) => index * -14, duration, stagger: 0.08, ease: "none" }, 0);
-      } else {
-        scenes.forEach((scene) => {
-          const visualPieces = Array.from(scene.querySelectorAll<HTMLElement>("[data-story-piece]")).filter((item) => !item.closest(".story-copy"));
-          const timeline = gsap.timeline({ scrollTrigger: { trigger: scene, start: "top 82%", toggleActions: "play none none reverse" } });
-          timeline
-            .from(scene.querySelectorAll(".story-copy > *"), { y: 20, opacity: 0, stagger: 0.06, duration: 0.36, ease: "power3.out" })
-            .from(visualPieces, { y: 20, opacity: 0, stagger: 0.055, duration: 0.34, ease: "power3.out" }, "-=0.16");
-        });
-      }
     }
 
     let active = true;

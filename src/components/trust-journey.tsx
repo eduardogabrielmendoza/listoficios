@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { createConnectorPath } from "@/lib/motion-geometry";
 
@@ -15,7 +15,7 @@ export function TrustJourney() {
   const pathRef = useRef<SVGPathElement>(null);
   const cardsRef = useRef<Array<HTMLDivElement | null>>([]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     const path = pathRef.current;
     if (!container || !path) return;
@@ -48,9 +48,11 @@ export function TrustJourney() {
       </svg>
       <div className="trust-route-list">
         {items.map((item, index) => (
-          <div ref={(node) => { cardsRef.current[index] = node; }} data-motion-trust-node key={item.title} className={`trust-route-card trust-route-card-${index + 1}`}>
-            <span><Icon name={item.icon} className="size-5" /></span>
-            <div><p>{item.title}</p><small>{item.copy}</small></div>
+          <div ref={(node) => { cardsRef.current[index] = node; }} key={item.title} className={`trust-route-card trust-route-card-${index + 1}`}>
+            <div data-motion-trust-node className="trust-route-card-content">
+              <span><Icon name={item.icon} className="size-5" /></span>
+              <div><p>{item.title}</p><small>{item.copy}</small></div>
+            </div>
           </div>
         ))}
       </div>
