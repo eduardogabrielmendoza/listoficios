@@ -21,11 +21,11 @@ const desktopZones = [
   { name: "Alrededores", x: 260, y: 338, path: "M260 195C260 250 260 294 260 338" },
 ];
 const mobileZones = [
-  { name: "Centro", x: 76, y: 68, path: "M160 236C122 170 96 112 76 68" },
-  { name: "Los Pinos", x: 244, y: 126, path: "M160 236C190 184 218 150 244 126" },
-  { name: "Villa Nueva", x: 72, y: 326, path: "M160 236C120 270 92 300 72 326" },
-  { name: "Santa Rita", x: 244, y: 370, path: "M160 236C202 282 226 330 244 370" },
-  { name: "Alrededores", x: 160, y: 452, path: "M160 236C160 312 160 382 160 452" },
+  { name: "Centro", x: 70, y: 58, path: "M160 195C122 136 94 88 70 58" },
+  { name: "Los Pinos", x: 250, y: 92, path: "M160 195C194 144 222 112 250 92" },
+  { name: "Villa Nueva", x: 68, y: 278, path: "M160 195C120 228 92 258 68 278" },
+  { name: "Santa Rita", x: 252, y: 300, path: "M160 195C204 236 230 274 252 300" },
+  { name: "Alrededores", x: 160, y: 356, path: "M160 195C160 250 160 306 160 356" },
 ];
 
 export function HomeServicesStory() {
@@ -86,15 +86,15 @@ export function HomeServicesStory() {
                 <div className="services-map-grid" aria-hidden="true" />
                 <svg className="services-zone-svg services-zone-svg-desktop" viewBox="0 0 520 390" fill="none" aria-hidden="true">
                   {desktopZones.map((zone) => <path key={`shadow-${zone.name}`} className="services-map-path-shadow" d={zone.path} />)}
-                  {desktopZones.map((zone, index) => <path key={`route-${zone.name}`} data-services-map-path data-services-map-leg={index} data-path-normalized="true" pathLength="1" d={zone.path} />)}
+                  {desktopZones.map((zone, index) => <path key={`route-${zone.name}`} data-services-map-path data-services-map-leg={index} d={zone.path} />)}
                   <g data-services-map-center className="services-map-center" transform="translate(260 195)"><circle r="39" /><circle r="27" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
                   {desktopZones.map((zone, index) => <g data-services-map-node data-services-map-leg={index} key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="12" /><circle r="4" className="services-map-node-core" /><text y="28">{zone.name}</text></g>)}
                 </svg>
-                <svg className="services-zone-svg services-zone-svg-mobile" viewBox="0 0 320 490" fill="none" aria-hidden="true">
+                <svg className="services-zone-svg services-zone-svg-mobile" viewBox="0 0 320 400" fill="none" aria-hidden="true">
                   {mobileZones.map((zone) => <path key={`shadow-${zone.name}`} className="services-map-path-shadow" d={zone.path} />)}
-                  {mobileZones.map((zone, index) => <path key={`route-${zone.name}`} data-services-map-path data-services-map-leg={index} data-path-normalized="true" pathLength="1" d={zone.path} />)}
-                  <g data-services-map-center className="services-map-center" transform="translate(160 236)"><circle r="38" /><circle r="26" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
-                  {mobileZones.map((zone, index) => <g data-services-map-node data-services-map-leg={index} key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="12" /><circle r="4" className="services-map-node-core" /><text y="28">{zone.name}</text></g>)}
+                  {mobileZones.map((zone, index) => <path key={`route-${zone.name}`} data-services-map-path data-services-map-leg={index} d={zone.path} />)}
+                  <g data-services-map-center className="services-map-center" transform="translate(160 195)"><circle r="38" /><circle r="26" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
+                  {mobileZones.map((zone, index) => <g data-services-map-node data-services-map-leg={index} key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="14" /><circle r="4.5" className="services-map-node-core" /><text y="31">{zone.name}</text></g>)}
                 </svg>
                 <p className="sr-only">Cobertura en Centro, Los Pinos, Villa Nueva, Santa Rita y alrededores de Bella Vista.</p>
               </div>

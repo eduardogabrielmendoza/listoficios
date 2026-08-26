@@ -82,6 +82,49 @@ test("el servicio del hero permanece contenido y cambia sin duplicarse", async (
   }
 });
 
+test("las rutas se trazan de forma progresiva y reversible", async ({ page }, testInfo) => {
+  await page.goto("/");
+  const sticky = page.locator("[data-services-sticky]");
+  await expect(sticky.locator("xpath=..")).toHaveClass(/pin-spacer/);
+  const triggerTop = await sticky.locator("xpath=..").evaluate((element) => element.getBoundingClientRect().top + scrollY);
+  const distance = await page.evaluate((desktop) => desktop ? Math.max(3600, innerHeight * 4.15) : Math.max(3900, innerHeight * 5.45), testInfo.project.name === "desktop");
+  const samples: number[][] = [];
+  for (const progress of [0.45, 0.52, 0.59, 0.66, 0.73]) {
+    await page.evaluate(({ top, offset }) => scrollTo(0, top + offset), { top: triggerTop, offset: distance * progress });
+    await page.waitForTimeout(testInfo.project.name === "desktop" ? 450 : 180);
+    samples.push(await page.locator(".services-zone-svg:visible [data-services-map-path]").evaluateAll((paths) => paths.map((path) => {
+      const svgPath = path as SVGPathElement;
+      const length = svgPath.getTotalLength();
+      const offset = Number.parseFloat(getComputedStyle(svgPath).strokeDashoffset) || 0;
+      return Math.max(0, Math.min(1, 1 - offset / length));
+    })));
+  }
+  const totals = samples.map((sample) => sample.reduce((total, progress) => total + progress, 0));
+  expect(totals.at(-1) ?? 0).toBeGreaterThan((totals[0] ?? 0) + 0.5);
+  expect(samples.some((sample) => sample.some((progress) => progress > 0.08 && progress < 0.92))).toBe(true);
+  totals.slice(1).forEach((total, index) => expect(total).toBeGreaterThanOrEqual(totals[index] - 0.08));
+
+  const trust = page.locator("[data-motion-trust]");
+  const trustRange = await trust.evaluate((element) => {
+    const top = element.getBoundingClientRect().top + scrollY;
+    return { start: top - innerHeight * 0.84, end: top + element.getBoundingClientRect().height - innerHeight * 0.2 };
+  });
+  const trustProgress = async () => page.locator("[data-motion-trust-path]").evaluate((path) => {
+    const svgPath = path as SVGPathElement;
+    return 1 - (Number.parseFloat(getComputedStyle(svgPath).strokeDashoffset) || 0) / svgPath.getTotalLength();
+  });
+  await page.evaluate(({ start, end }) => scrollTo(0, start + (end - start) * 0.55), trustRange);
+  await page.waitForTimeout(testInfo.project.name === "desktop" ? 650 : 250);
+  expect(await trustProgress()).toBeGreaterThan(0.15);
+  expect(await trustProgress()).toBeLessThan(0.9);
+  await page.evaluate(({ end }) => scrollTo(0, end + 10), trustRange);
+  await page.waitForTimeout(testInfo.project.name === "desktop" ? 650 : 250);
+  expect(await trustProgress()).toBeGreaterThan(0.94);
+  await page.evaluate(({ start }) => scrollTo(0, start - 10), trustRange);
+  await page.waitForTimeout(testInfo.project.name === "desktop" ? 650 : 250);
+  expect(await trustProgress()).toBeLessThan(0.08);
+});
+
 test("comparación, cobertura y confianza conservan geometría segura", async ({ page }, testInfo) => {
   await page.goto("/");
 
@@ -147,7 +190,7 @@ test("movimiento reducido mantiene el contenido completo sin pinning", async ({ 
 test("los segmentos conservan gaps y ancho seguro en los breakpoints objetivo", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "La matriz responsive se ejecuta una sola vez.");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const width of [390, 768, 1024, 1440]) {
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     const result = await page.evaluate(() => {
@@ -165,5 +208,42 @@ test("los segmentos conservan gaps y ancho seguro en los breakpoints objetivo", 
     expect(result.overflow, `overflow horizontal a ${width}px`).toBeLessThanOrEqual(1);
     expect(result.internalOverflow, `contenedores laterales a ${width}px`).toBe(0);
     expect(result.collisions, `secciones superpuestas a ${width}px`).toBe(0);
+  }
+});
+
+test("las escenas activas caben en teléfonos pequeños", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "La prueba corresponde al modo móvil.");
+  for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }]) {
+    await page.goto("about:blank");
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.locator("[data-motion-home].home-motion-mobile")).toHaveCount(1);
+    await expect(page.locator("[data-story-sticky]").locator("xpath=..")).toHaveClass(/pin-spacer/);
+    const storyTop = await page.locator("[data-motion-story]").evaluate((element) => element.getBoundingClientRect().top + scrollY);
+    await page.evaluate((top) => scrollTo(0, top + 1700), storyTop);
+    await page.waitForTimeout(250);
+    const storyFit = await page.locator("[data-story-scene]").evaluateAll((scenes) => {
+      const active = scenes.toSorted((a, b) => Number(getComputedStyle(b).opacity) - Number(getComputedStyle(a).opacity))[0] as HTMLElement;
+      const box = active.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, overflow: active.scrollHeight - active.clientHeight };
+    });
+    expect(storyFit.top).toBeGreaterThanOrEqual(-2);
+    expect(storyFit.bottom).toBeLessThanOrEqual(viewport.height + 2);
+    expect(storyFit.overflow).toBeLessThanOrEqual(16);
+    expect(await visibleSiblingCollisions(page, ".story-profile-card")).toBe(0);
+
+    await expect(page.locator("[data-services-sticky]").locator("xpath=..")).toHaveClass(/pin-spacer/);
+    const servicesTop = await page.locator("[data-services-sticky]").evaluate((element) => element.getBoundingClientRect().top + scrollY);
+    await page.evaluate((top) => scrollTo(0, top + 2400), servicesTop);
+    await page.waitForTimeout(250);
+    const servicesFit = await page.locator("[data-services-scene]").evaluateAll((scenes) => {
+      const active = scenes.toSorted((a, b) => Number(getComputedStyle(b).opacity) - Number(getComputedStyle(a).opacity))[0] as HTMLElement;
+      const box = active.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, overflow: active.scrollHeight - active.clientHeight };
+    });
+    expect(servicesFit.top).toBeGreaterThanOrEqual(-2);
+    expect(servicesFit.bottom).toBeLessThanOrEqual(viewport.height + 2);
+    expect(servicesFit.overflow).toBeLessThanOrEqual(16);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   }
 });

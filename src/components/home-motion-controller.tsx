@@ -67,7 +67,7 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         gsap.set(serviceDots[0], { color: "var(--ink)", opacity: 1 });
         serviceMapPaths.forEach((path) => {
           const length = path.getTotalLength();
-          gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
+          gsap.set(path, { autoAlpha: 0, strokeDasharray: length, strokeDashoffset: length });
         });
         gsap.set(serviceMapNodes, { autoAlpha: 0, scale: 0.72, transformOrigin: "center" });
         gsap.set(serviceMapCenters, { autoAlpha: 0, scale: 0.82, transformOrigin: "center" });
@@ -87,7 +87,6 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
             invalidateOnRefresh: true,
             refreshPriority: 1,
             preventOverlaps: "home-services",
-            fastScrollEnd: true,
             onToggle: (self) => servicesSticky.classList.toggle("is-motion-active", self.isActive),
           },
         });
@@ -109,9 +108,10 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
               const paths = serviceMapPaths.filter((path) => path.dataset.servicesMapLeg === String(leg));
               const nodes = serviceMapNodes.filter((node) => node.dataset.servicesMapLeg === String(leg));
               servicesTimeline
-                .to(paths, { strokeDashoffset: 0, duration: 0.34, ease: "none" })
-                .to(nodes, { autoAlpha: 1, scale: 1, duration: 0.16, ease: "power2.out" }, "-=0.03")
-                .to({}, { duration: 0.07 });
+                .to(paths, { autoAlpha: 1, duration: 0.08, ease: "none" })
+                .to(paths, { strokeDashoffset: 0, duration: 0.56, ease: "none" }, "<")
+                .to(nodes, { autoAlpha: 1, scale: 1, duration: 0.2, ease: "power2.out" }, "-=0.04")
+                .to({}, { duration: 0.1 });
             }
           }
           servicesTimeline.to({}, { duration: index === serviceScenes.length - 1 ? 0.58 : 0.24 });
@@ -140,16 +140,16 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
       const trustTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: "[data-motion-trust]",
-          start: "top 78%",
-          end: "bottom 32%",
-          scrub: 0.55,
+          start: "top 84%",
+          end: "bottom 20%",
+          scrub: 0.22,
           invalidateOnRefresh: true,
-          fastScrollEnd: true,
+          onRefreshInit: () => gsap.set(trustPath, { strokeDasharray: trustPath.getTotalLength() }),
         },
       });
       trustTimeline
         .to(trustNodes[0], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" })
-        .to(trustPath, { strokeDashoffset: trustLength * 0.5, duration: 0.65, ease: "none" })
+        .to(trustPath, { strokeDashoffset: () => trustPath.getTotalLength() * 0.5, duration: 0.65, ease: "none" })
         .to(trustNodes[1], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }, "-=0.08")
         .to(trustPath, { strokeDashoffset: 0, duration: 0.65, ease: "none" })
         .to(trustNodes[2], { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }, "-=0.08")
@@ -182,7 +182,6 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
             invalidateOnRefresh: true,
             refreshPriority: 2,
             preventOverlaps: "home-story",
-            fastScrollEnd: true,
             onToggle: (self) => sticky.classList.toggle("is-motion-active", self.isActive),
           },
         });

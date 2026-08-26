@@ -44,7 +44,7 @@ export function TrustJourney() {
   return (
     <div ref={containerRef} className="trust-journey">
       <svg className="trust-route" fill="none" aria-hidden="true">
-        <path ref={pathRef} data-motion-trust-path data-path-normalized="true" pathLength="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path ref={pathRef} data-motion-trust-path stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       </svg>
       <div className="trust-route-list">
         {items.map((item, index) => (
