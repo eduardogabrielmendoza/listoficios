@@ -13,7 +13,20 @@ const trades: Array<{ icon: IconName; label: string }> = [
   { icon: "brick", label: "Albañilería" },
   { icon: "leaf", label: "Jardinería" },
 ];
-const zones = ["Centro", "Los Pinos", "Villa Nueva", "Santa Rita", "Alrededores"];
+const desktopZones = [
+  { name: "Centro", x: 112, y: 92 },
+  { name: "Los Pinos", x: 408, y: 78 },
+  { name: "Villa Nueva", x: 92, y: 286 },
+  { name: "Santa Rita", x: 424, y: 286 },
+  { name: "Alrededores", x: 260, y: 338 },
+];
+const mobileZones = [
+  { name: "Centro", x: 76, y: 68 },
+  { name: "Los Pinos", x: 244, y: 126 },
+  { name: "Villa Nueva", x: 72, y: 326 },
+  { name: "Santa Rita", x: 244, y: 370 },
+  { name: "Alrededores", x: 160, y: 452 },
+];
 
 export function HomeServicesStory() {
   const site = useSiteConfig();
@@ -44,7 +57,7 @@ export function HomeServicesStory() {
                 <h3>{site.motion.servicesNeedText}</h3>
                 <p>No hace falta conocer el nombre técnico. Una necesidad cotidiana es suficiente para comenzar.</p>
               </div>
-              <div className="services-need-board" aria-label="Ejemplos visuales de necesidades">
+              <div className="services-need-board" aria-label="Necesidades que se pueden buscar">
                 <span className="services-orbit services-orbit-a" aria-hidden="true" />
                 <span className="services-orbit services-orbit-b" aria-hidden="true" />
                 {needs.map((need, index) => <span data-services-piece className={`services-need-token token-${index + 1}`} key={need}><Icon name={index === 0 ? "wrench" : index === 1 ? "sparkles" : "clock"} className="size-5" />{need}</span>)}
@@ -58,7 +71,7 @@ export function HomeServicesStory() {
                 <h3>{site.motion.servicesCategoriesText}</h3>
                 <p>Las categorías ordenan posibilidades sin obligarte a saber exactamente a quién buscar.</p>
               </div>
-              <div className="services-trade-grid" aria-label="Ejemplos visuales de categorías de servicios">
+              <div className="services-trade-grid" aria-label="Categorías de servicios disponibles">
                 {trades.map((trade, index) => <div data-services-piece key={trade.label} className={index === 0 ? "is-emphasized" : ""}><span><Icon name={trade.icon} className="size-5" /></span><strong>{trade.label}</strong><small>Servicio local</small></div>)}
               </div>
             </article>
@@ -71,9 +84,19 @@ export function HomeServicesStory() {
               </div>
               <div className="services-zone-map" aria-label="Mapa ilustrativo de cobertura en Bella Vista">
                 <div className="services-map-grid" aria-hidden="true" />
-                <svg viewBox="0 0 520 390" fill="none" aria-hidden="true"><path data-services-map-path d="M62 210C112 92 218 84 255 182C292 280 392 294 458 164" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M62 210C112 92 218 84 255 182C292 280 392 294 458 164" stroke="currentColor" strokeWidth="14" strokeLinecap="round" opacity=".05" /></svg>
-                {zones.map((zone, index) => <span data-services-piece key={zone} className={`services-zone-node zone-${index + 1}`}><i />{zone}</span>)}
-                <div data-services-piece className="services-map-label"><Icon name="location" className="size-5" /><span><small>Ciudad operativa</small><strong>Bella Vista</strong></span></div>
+                <svg className="services-zone-svg services-zone-svg-desktop" viewBox="0 0 520 390" fill="none" aria-hidden="true">
+                  <path className="services-map-path-shadow" d="M260 195C210 130 170 112 112 92M260 195C315 128 352 100 408 78M260 195C205 238 152 270 92 286M260 195C315 238 370 270 424 286M260 195C260 250 260 294 260 338" />
+                  <path data-services-map-path data-path-normalized="true" pathLength="1" d="M260 195C210 130 170 112 112 92M260 195C315 128 352 100 408 78M260 195C205 238 152 270 92 286M260 195C315 238 370 270 424 286M260 195C260 250 260 294 260 338" />
+                  <g data-services-map-center className="services-map-center" transform="translate(260 195)"><circle r="39" /><circle r="27" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
+                  {desktopZones.map((zone) => <g data-services-map-node key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="12" /><circle r="4" className="services-map-node-core" /><text y="28">{zone.name}</text></g>)}
+                </svg>
+                <svg className="services-zone-svg services-zone-svg-mobile" viewBox="0 0 320 490" fill="none" aria-hidden="true">
+                  <path className="services-map-path-shadow" d="M160 236C122 170 96 112 76 68M160 236C190 184 218 150 244 126M160 236C120 270 92 300 72 326M160 236C202 282 226 330 244 370M160 236C160 312 160 382 160 452" />
+                  <path data-services-map-path data-path-normalized="true" pathLength="1" d="M160 236C122 170 96 112 76 68M160 236C190 184 218 150 244 126M160 236C120 270 92 300 72 326M160 236C202 282 226 330 244 370M160 236C160 312 160 382 160 452" />
+                  <g data-services-map-center className="services-map-center" transform="translate(160 236)"><circle r="38" /><circle r="26" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
+                  {mobileZones.map((zone) => <g data-services-map-node key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="12" /><circle r="4" className="services-map-node-core" /><text y="28">{zone.name}</text></g>)}
+                </svg>
+                <p className="sr-only">Cobertura en Centro, Los Pinos, Villa Nueva, Santa Rita y alrededores de Bella Vista.</p>
               </div>
             </article>
 
@@ -83,8 +106,8 @@ export function HomeServicesStory() {
                 <h3>{site.motion.servicesClarityText}</h3>
                 <p>Listoficios organiza datos útiles. La conversación y el acuerdo siguen siendo directos.</p>
               </div>
-              <div className="services-clarity-board" aria-label="Ejemplo visual de información para comparar">
-                <div data-services-piece className="services-clarity-heading"><span>Información del servicio</span><i>Ejemplo visual</i></div>
+              <div className="services-clarity-board" aria-label="Información disponible para comparar">
+                <div data-services-piece className="services-clarity-heading"><span>Información del servicio</span><i>Datos principales</i></div>
                 <div className="services-clarity-grid">
                   <span data-services-piece><Icon name="tag" className="size-5" /><small>Servicio</small><strong>Descripción clara</strong></span>
                   <span data-services-piece><Icon name="clock" className="size-5" /><small>Experiencia</small><strong>Trayectoria informada</strong></span>

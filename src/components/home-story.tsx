@@ -1,6 +1,5 @@
 "use client";
 
-import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
 import { useSiteConfig } from "@/components/site-config-provider";
 import type { ServiceProfile } from "@/lib/app-types";
@@ -50,7 +49,7 @@ export function HomeStory({ professionals }: { professionals: ServiceProfile[] }
                 <div data-story-piece className="story-search-query"><Icon name="search" className="size-5" /><strong>{site.motion.searchText}</strong><span>Buscar</span></div>
                 <div data-story-piece className="story-search-zone"><Icon name="location" className="size-4" />Bella Vista · Toda la ciudad <Icon name="chevron-down" className="ml-auto size-4" /></div>
                 <div className="story-search-results">
-                  {professionals.slice(0, 3).map((profile) => <div data-story-piece key={profile.id} className="story-search-result"><Avatar initials={profile.initials} tone={profile.avatarTone} imageUrl={profile.avatarUrl} className="size-10" /><span><strong>{profile.name}</strong><small>{profile.trade} · {profile.zones[0]}</small></span><Icon name="arrow-right" className="size-4" /></div>)}
+                  {professionals.slice(0, 3).map((profile, index) => <div data-story-piece key={profile.id} className="story-search-result"><span className="story-service-mark"><Icon name={index === 0 ? "wrench" : index === 1 ? "paint" : "bolt"} className="size-4" /></span><span><strong>{profile.name}</strong><small>{profile.trade} · {profile.zones[0]}</small></span><span className="story-result-status" aria-hidden="true" /></div>)}
                 </div>
               </div>
             </article>
@@ -66,10 +65,9 @@ export function HomeStory({ professionals }: { professionals: ServiceProfile[] }
                 <div data-story-piece className="story-stack-label"><span>Perfiles encontrados</span><strong>{professionals.slice(0, 3).length}</strong></div>
                 {professionals.slice(0, 3).map((profile, index) => (
                   <div data-home-demo data-story-piece key={profile.id} className={`story-profile-card ${index === 0 ? "is-featured" : ""}`}>
-                    <Avatar initials={profile.initials} tone={profile.avatarTone} imageUrl={profile.avatarUrl} className="size-12" />
-                    <span className="min-w-0 flex-1"><strong>{profile.name}</strong><small>{profile.trade} · {profile.zones[0]}</small><i>{profile.experienceYears} años de experiencia</i></span>
+                    <span className="story-service-mark story-service-mark-large"><Icon name={index === 0 ? "wrench" : index === 1 ? "paint" : "bolt"} className="size-5" /></span>
+                    <span className="story-profile-copy"><strong>{profile.name}</strong><small>{profile.trade} · {profile.zones[0]}</small><i>{profile.experienceYears} años de experiencia</i></span>
                     <span className="story-profile-price">{formatPrice(profile.pricingMode, profile.priceAmount)}</span>
-                    <span className="story-demo-label">Ejemplo</span>
                   </div>
                 ))}
               </div>
@@ -84,13 +82,13 @@ export function HomeStory({ professionals }: { professionals: ServiceProfile[] }
               </div>
               <div className="story-contact-card">
                 <div data-story-piece className="story-contact-person">
-                  {featured ? <Avatar initials={featured.initials} tone={featured.avatarTone} imageUrl={featured.avatarUrl} className="size-14" /> : null}
+                  <span className="story-contact-mark"><Icon name="wrench" className="size-5" /></span>
                   <span><strong>{featured?.name ?? "Profesional local"}</strong><small>Disponible en Bella Vista</small></span><span className="story-online" />
                 </div>
                 <div data-story-piece className="story-message"><Icon name="message" className="size-5" /><p>{site.motion.contactText}</p></div>
                 <div data-story-piece className="story-message story-message-reply"><p>¡Hola! Contame un poco más y coordinamos.</p><Icon name="check" className="size-4" /></div>
                 <div data-story-piece className="story-direct-line"><span /><p><Icon name="shield" className="size-4" /> Contacto directo</p><span /></div>
-                <div data-home-demo data-story-piece className="story-contact-cta"><Icon name="check" className="size-4" /> Contacto preparado <span>Ejemplo visual</span></div>
+                <div data-home-demo data-story-piece className="story-contact-cta"><Icon name="check" className="size-4" /> Contacto preparado</div>
               </div>
             </article>
           </div>

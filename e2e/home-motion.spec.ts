@@ -1,5 +1,19 @@
 import { expect, test } from "@playwright/test";
 
+async function visibleSiblingCollisions(page: import("@playwright/test").Page, selector: string) {
+  return page.locator(selector).evaluateAll((elements) => {
+    const boxes = elements.map((element) => ({ style: getComputedStyle(element), box: element.getBoundingClientRect() }))
+      .filter(({ style, box }) => style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) > 0.05 && box.width > 0 && box.height > 0)
+      .map(({ box }) => box);
+    let collisions = 0;
+    boxes.forEach((box, index) => boxes.slice(index + 1).forEach((other) => {
+      const separated = box.right <= other.left + 1 || other.right <= box.left + 1 || box.bottom <= other.top + 1 || other.bottom <= box.top + 1;
+      if (!separated) collisions += 1;
+    }));
+    return collisions;
+  });
+}
+
 test("la narrativa y el mapa completan sus escenas antes de liberar el contenido", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Una búsqueda clara/ })).toBeVisible();
@@ -8,6 +22,9 @@ test("la narrativa y el mapa completan sus escenas antes de liberar el contenido
   await expect(page.locator("[data-services-scene]")).toHaveCount(4);
   await expect(page.getByRole("heading", { name: "Servicios cerca tuyo" })).toBeAttached();
   await expect(page.getByRole("link", { name: /Explorar todos los servicios/ })).toHaveAttribute("href", "/servicios");
+  await expect(page.locator("body")).not.toContainText(/Hecho para Bella Vista|Ejemplo visual/);
+  await expect(page.getByText("Explorá por oficio", { exact: true })).toHaveCount(0);
+  await expect(page.locator("[data-home-demo] [role=img]")).toHaveCount(0);
 
   const demoControls = page.locator("[data-home-demo] a, [data-home-demo] button, a[data-home-demo], button[data-home-demo]");
   await expect(demoControls).toHaveCount(0);
@@ -37,6 +54,39 @@ test("la narrativa y el mapa completan sus escenas antes de liberar el contenido
     await page.locator("[data-services-scene]").last().scrollIntoViewIfNeeded();
     await expect(page.locator("[data-services-scene]").last()).toBeVisible();
   }
+});
+
+test("comparación, cobertura y confianza conservan geometría segura", async ({ page }, testInfo) => {
+  await page.goto("/");
+
+  if (testInfo.project.name === "desktop") {
+    const storyTop = await page.locator("[data-motion-story]").evaluate((element) => element.getBoundingClientRect().top + scrollY);
+    const distance = await page.evaluate(() => Math.max(2800, innerHeight * 3.45));
+    for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
+      await page.evaluate(({ top, offset }) => scrollTo(0, top + offset), { top: storyTop, offset: distance * progress });
+      await page.waitForTimeout(180);
+      expect(await visibleSiblingCollisions(page, ".story-profile-card"), `tarjetas al ${progress * 100}%`).toBe(0);
+    }
+  }
+
+  await page.locator(".services-zones-scene").scrollIntoViewIfNeeded();
+  expect(await visibleSiblingCollisions(page, ".services-map-node"), "nodos de cobertura").toBe(0);
+
+  await page.locator("[data-motion-trust]").scrollIntoViewIfNeeded();
+  await expect.poll(() => page.locator("[data-motion-trust-path]").getAttribute("d")).not.toBe("");
+  await page.waitForTimeout(850);
+  expect(await visibleSiblingCollisions(page, ".trust-route-card"), "tarjetas de confianza").toBe(0);
+  const routeEndDistance = await page.locator(".trust-journey").evaluate((container) => {
+    const path = container.querySelector<SVGPathElement>("[data-motion-trust-path]");
+    const contact = container.querySelector<HTMLElement>(".trust-route-card-3");
+    if (!path || !contact) return Number.POSITIVE_INFINITY;
+    const point = path.getPointAtLength(path.getTotalLength());
+    const containerBox = container.getBoundingClientRect();
+    const contactBox = contact.getBoundingClientRect();
+    const target = { x: contactBox.left - containerBox.left + contactBox.width / 2, y: contactBox.top - containerBox.top + contactBox.height / 2 };
+    return Math.hypot(point.x - target.x, point.y - target.y);
+  });
+  expect(routeEndDistance).toBeLessThanOrEqual(3);
 });
 
 test("el controlador global permanece activo al navegar y bloquea overlays", async ({ page }, testInfo) => {
