@@ -67,7 +67,12 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         gsap.set(serviceDots[0], { color: "var(--ink)", opacity: 1 });
         serviceMapPaths.forEach((path) => {
           const length = path.getTotalLength();
-          gsap.set(path, { autoAlpha: 0, strokeDasharray: length, strokeDashoffset: length });
+          const hiddenLength = length + 4;
+          gsap.set(path, {
+            autoAlpha: 0,
+            strokeDasharray: `${hiddenLength} ${hiddenLength}`,
+            strokeDashoffset: hiddenLength,
+          });
         });
         gsap.set(serviceMapNodes, { autoAlpha: 0, scale: 0.72, transformOrigin: "center" });
         gsap.set(serviceMapCenters, { autoAlpha: 0, scale: 0.82, transformOrigin: "center" });
@@ -108,9 +113,9 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
               const paths = serviceMapPaths.filter((path) => path.dataset.servicesMapLeg === String(leg));
               const nodes = serviceMapNodes.filter((node) => node.dataset.servicesMapLeg === String(leg));
               servicesTimeline
-                .to(paths, { autoAlpha: 1, duration: 0.08, ease: "none" })
-                .to(paths, { strokeDashoffset: 0, duration: 0.56, ease: "none" }, "<")
-                .to(nodes, { autoAlpha: 1, scale: 1, duration: 0.2, ease: "power2.out" }, "-=0.04")
+                .set(paths, { autoAlpha: 1 })
+                .to(paths, { strokeDashoffset: 0, duration: 0.68, ease: "none" })
+                .to(nodes, { autoAlpha: 1, scale: 1, duration: 0.18, ease: "power2.out" }, "-=0.02")
                 .to({}, { duration: 0.1 });
             }
           }
@@ -135,16 +140,23 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
     const trustNodes = gsap.utils.toArray<HTMLElement>("[data-motion-trust-node]");
     if (trustPath && trustNodes.length) {
       const trustLength = trustPath.getTotalLength();
-      gsap.set(trustPath, { strokeDasharray: trustLength, strokeDashoffset: trustLength });
+      const hiddenTrustLength = trustLength + 4;
+      gsap.set(trustPath, {
+        strokeDasharray: `${hiddenTrustLength} ${hiddenTrustLength}`,
+        strokeDashoffset: hiddenTrustLength,
+      });
       gsap.set(trustNodes, { autoAlpha: 0, y: 18 });
       const trustTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: "[data-motion-trust]",
-          start: "top 84%",
-          end: "bottom 20%",
-          scrub: 0.22,
+          start: "top 82%",
+          end: "bottom 60%",
+          scrub: true,
           invalidateOnRefresh: true,
-          onRefreshInit: () => gsap.set(trustPath, { strokeDasharray: trustPath.getTotalLength() }),
+          onRefreshInit: () => {
+            const length = trustPath.getTotalLength();
+            gsap.set(trustPath, { strokeDasharray: `${length + 4} ${length + 4}` });
+          },
         },
       });
       trustTimeline

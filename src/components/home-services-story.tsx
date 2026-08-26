@@ -14,18 +14,18 @@ const trades: Array<{ icon: IconName; label: string }> = [
   { icon: "leaf", label: "Jardinería" },
 ];
 const desktopZones = [
-  { name: "Centro", x: 112, y: 92, path: "M260 195C210 130 170 112 112 92" },
-  { name: "Los Pinos", x: 408, y: 78, path: "M260 195C315 128 352 100 408 78" },
-  { name: "Villa Nueva", x: 92, y: 286, path: "M260 195C205 238 152 270 92 286" },
-  { name: "Santa Rita", x: 424, y: 286, path: "M260 195C315 238 370 270 424 286" },
-  { name: "Alrededores", x: 260, y: 338, path: "M260 195C260 250 260 294 260 338" },
+  { name: "Villa Nueva", x: 100, y: 270, path: "M260 340C198 340 132 313 100 270" },
+  { name: "Centro", x: 118, y: 98, path: "M100 270C76 221 82 143 118 98" },
+  { name: "Los Pinos", x: 402, y: 98, path: "M118 98C188 43 332 43 402 98" },
+  { name: "Santa Rita", x: 420, y: 270, path: "M402 98C438 143 444 221 420 270" },
+  { name: "Alrededores", x: 260, y: 340, path: "M420 270C388 313 322 340 260 340" },
 ];
 const mobileZones = [
-  { name: "Centro", x: 70, y: 58, path: "M160 195C122 136 94 88 70 58" },
-  { name: "Los Pinos", x: 250, y: 92, path: "M160 195C194 144 222 112 250 92" },
-  { name: "Villa Nueva", x: 68, y: 278, path: "M160 195C120 228 92 258 68 278" },
-  { name: "Santa Rita", x: 252, y: 300, path: "M160 195C204 236 230 274 252 300" },
-  { name: "Alrededores", x: 160, y: 356, path: "M160 195C160 250 160 306 160 356" },
+  { name: "Villa Nueva", x: 48, y: 274, path: "M160 354C112 350 70 318 48 274" },
+  { name: "Centro", x: 58, y: 88, path: "M48 274C28 218 34 139 58 88" },
+  { name: "Los Pinos", x: 262, y: 88, path: "M58 88C108 39 212 39 262 88" },
+  { name: "Santa Rita", x: 272, y: 274, path: "M262 88C286 139 292 218 272 274" },
+  { name: "Alrededores", x: 160, y: 354, path: "M272 274C250 318 208 350 160 354" },
 ];
 
 export function HomeServicesStory() {

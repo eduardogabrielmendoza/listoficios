@@ -107,7 +107,7 @@ test("las rutas se trazan de forma progresiva y reversible", async ({ page }, te
   const trust = page.locator("[data-motion-trust]");
   const trustRange = await trust.evaluate((element) => {
     const top = element.getBoundingClientRect().top + scrollY;
-    return { start: top - innerHeight * 0.84, end: top + element.getBoundingClientRect().height - innerHeight * 0.2 };
+    return { start: top - innerHeight * 0.82, end: top + element.getBoundingClientRect().height - innerHeight * 0.6 };
   });
   const trustProgress = async () => page.locator("[data-motion-trust-path]").evaluate((path) => {
     const svgPath = path as SVGPathElement;
@@ -118,8 +118,17 @@ test("las rutas se trazan de forma progresiva y reversible", async ({ page }, te
   expect(await trustProgress()).toBeGreaterThan(0.15);
   expect(await trustProgress()).toBeLessThan(0.9);
   await page.evaluate(({ end }) => scrollTo(0, end + 10), trustRange);
-  await page.waitForTimeout(testInfo.project.name === "desktop" ? 650 : 250);
+  await page.waitForTimeout(120);
   expect(await trustProgress()).toBeGreaterThan(0.94);
+  const trustExitProgress = await trust.evaluate(async (element) => {
+    const bottom = element.getBoundingClientRect().bottom + scrollY;
+    scrollTo(0, bottom - innerHeight * 0.2);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const path = element.querySelector<SVGPathElement>("[data-motion-trust-path]");
+    if (!path) return 0;
+    return 1 - (Number.parseFloat(getComputedStyle(path).strokeDashoffset) || 0) / path.getTotalLength();
+  });
+  expect(trustExitProgress).toBeGreaterThan(0.98);
   await page.evaluate(({ start }) => scrollTo(0, start - 10), trustRange);
   await page.waitForTimeout(testInfo.project.name === "desktop" ? 650 : 250);
   expect(await trustProgress()).toBeLessThan(0.08);
