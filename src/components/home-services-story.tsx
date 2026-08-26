@@ -13,19 +13,21 @@ const trades: Array<{ icon: IconName; label: string }> = [
   { icon: "brick", label: "Albañilería" },
   { icon: "leaf", label: "Jardinería" },
 ];
+const desktopRoute = "M260 340A160 145 0 0 1 108 240A160 145 0 0 1 166 78A160 145 0 0 1 354 78A160 145 0 0 1 412 240A160 145 0 0 1 260 340";
 const desktopZones = [
-  { name: "Villa Nueva", x: 100, y: 270, path: "M260 340C198 340 132 313 100 270" },
-  { name: "Centro", x: 118, y: 98, path: "M100 270C76 221 82 143 118 98" },
-  { name: "Los Pinos", x: 402, y: 98, path: "M118 98C188 43 332 43 402 98" },
-  { name: "Santa Rita", x: 420, y: 270, path: "M402 98C438 143 444 221 420 270" },
-  { name: "Alrededores", x: 260, y: 340, path: "M420 270C388 313 322 340 260 340" },
+  { name: "Villa Nueva", x: 108, y: 240 },
+  { name: "Centro", x: 166, y: 78 },
+  { name: "Los Pinos", x: 354, y: 78 },
+  { name: "Santa Rita", x: 412, y: 240 },
+  { name: "Alrededores", x: 260, y: 340 },
 ];
+const mobileRoute = "M160 350A120 150 0 0 1 46 246A120 150 0 0 1 89 79A120 150 0 0 1 231 79A120 150 0 0 1 274 246A120 150 0 0 1 160 350";
 const mobileZones = [
-  { name: "Villa Nueva", x: 48, y: 274, path: "M160 354C112 350 70 318 48 274" },
-  { name: "Centro", x: 58, y: 88, path: "M48 274C28 218 34 139 58 88" },
-  { name: "Los Pinos", x: 262, y: 88, path: "M58 88C108 39 212 39 262 88" },
-  { name: "Santa Rita", x: 272, y: 274, path: "M262 88C286 139 292 218 272 274" },
-  { name: "Alrededores", x: 160, y: 354, path: "M272 274C250 318 208 350 160 354" },
+  { name: "Villa Nueva", x: 46, y: 246 },
+  { name: "Centro", x: 89, y: 79 },
+  { name: "Los Pinos", x: 231, y: 79 },
+  { name: "Santa Rita", x: 274, y: 246 },
+  { name: "Alrededores", x: 160, y: 350 },
 ];
 
 export function HomeServicesStory() {
@@ -85,14 +87,14 @@ export function HomeServicesStory() {
               <div className="services-zone-map" aria-label="Mapa ilustrativo de cobertura en Bella Vista">
                 <div className="services-map-grid" aria-hidden="true" />
                 <svg className="services-zone-svg services-zone-svg-desktop" viewBox="0 0 520 390" fill="none" aria-hidden="true">
-                  {desktopZones.map((zone) => <path key={`shadow-${zone.name}`} className="services-map-path-shadow" d={zone.path} />)}
-                  {desktopZones.map((zone, index) => <path key={`route-${zone.name}`} data-services-map-path data-services-map-leg={index} d={zone.path} />)}
+                  <path className="services-map-path-shadow" d={desktopRoute} />
+                  <path data-services-map-path d={desktopRoute} />
                   <g data-services-map-center className="services-map-center" transform="translate(260 195)"><circle r="39" /><circle r="27" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
                   {desktopZones.map((zone, index) => <g data-services-map-node data-services-map-leg={index} key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="12" /><circle r="4" className="services-map-node-core" /><text y="28">{zone.name}</text></g>)}
                 </svg>
                 <svg className="services-zone-svg services-zone-svg-mobile" viewBox="0 0 320 400" fill="none" aria-hidden="true">
-                  {mobileZones.map((zone) => <path key={`shadow-${zone.name}`} className="services-map-path-shadow" d={zone.path} />)}
-                  {mobileZones.map((zone, index) => <path key={`route-${zone.name}`} data-services-map-path data-services-map-leg={index} d={zone.path} />)}
+                  <path className="services-map-path-shadow" d={mobileRoute} />
+                  <path data-services-map-path d={mobileRoute} />
                   <g data-services-map-center className="services-map-center" transform="translate(160 195)"><circle r="38" /><circle r="26" /><text y="-2">Bella Vista</text><text y="12">ciudad operativa</text></g>
                   {mobileZones.map((zone, index) => <g data-services-map-node data-services-map-leg={index} key={zone.name} className="services-map-node" transform={`translate(${zone.x} ${zone.y})`}><circle r="14" /><circle r="4.5" className="services-map-node-core" /><text y="31">{zone.name}</text></g>)}
                 </svg>

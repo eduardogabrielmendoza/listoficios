@@ -94,15 +94,22 @@ test("las rutas se trazan de forma progresiva y reversible", async ({ page }, te
     await page.waitForTimeout(testInfo.project.name === "desktop" ? 450 : 180);
     samples.push(await page.locator(".services-zone-svg:visible [data-services-map-path]").evaluateAll((paths) => paths.map((path) => {
       const svgPath = path as SVGPathElement;
-      const length = svgPath.getTotalLength();
-      const offset = Number.parseFloat(getComputedStyle(svgPath).strokeDashoffset) || 0;
-      return Math.max(0, Math.min(1, 1 - offset / length));
+      const dashLength = Number.parseFloat(getComputedStyle(path).strokeDasharray) || svgPath.getTotalLength();
+      const offset = Number.parseFloat(getComputedStyle(path).strokeDashoffset) || 0;
+      return Math.max(0, Math.min(1, 1 - offset / dashLength));
     })));
   }
   const totals = samples.map((sample) => sample.reduce((total, progress) => total + progress, 0));
   expect(totals.at(-1) ?? 0).toBeGreaterThan((totals[0] ?? 0) + 0.5);
   expect(samples.some((sample) => sample.some((progress) => progress > 0.08 && progress < 0.92))).toBe(true);
   totals.slice(1).forEach((total, index) => expect(total).toBeGreaterThanOrEqual(totals[index] - 0.08));
+  const closedRoutes = await page.locator("[data-services-map-path]").evaluateAll((paths) => paths.map((path) => {
+    const svgPath = path as SVGPathElement;
+    const start = svgPath.getPointAtLength(0);
+    const end = svgPath.getPointAtLength(svgPath.getTotalLength());
+    return Math.hypot(start.x - end.x, start.y - end.y);
+  }));
+  expect(closedRoutes.every((distance) => distance < 0.5)).toBe(true);
 
   const trust = page.locator("[data-motion-trust]");
   const trustRange = await trust.evaluate((element) => {
@@ -148,7 +155,7 @@ test("comparación, cobertura y confianza conservan geometría segura", async ({
   }
 
   await page.locator(".services-zones-scene").scrollIntoViewIfNeeded();
-  await expect(page.locator("[data-services-map-path]")).toHaveCount(10);
+  await expect(page.locator("[data-services-map-path]")).toHaveCount(2);
   const pathCommands = await page.locator("[data-services-map-path]").evaluateAll((paths) => paths.map((path) => (path.getAttribute("d")?.match(/M/g) ?? []).length));
   expect(pathCommands.every((count) => count === 1)).toBe(true);
   expect(await visibleSiblingCollisions(page, ".services-map-node"), "nodos de cobertura").toBe(0);

@@ -212,9 +212,9 @@
 .services-zone-map { position:relative; min-height:390px; overflow:hidden; border:1px solid var(--line); border-radius:24px; background-color:#edf4f0; background-image:linear-gradient(rgba(16,47,41,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(16,47,41,.04) 1px,transparent 1px); background-size:26px 26px; }
 .services-zone-svg { position:absolute; inset:0; width:100%; height:100%; color:var(--brand); }
 .services-zone-svg-mobile { display:none; }
-.services-map-path-shadow,.services-zone-svg [data-services-map-path] { fill:none; stroke:currentColor; vector-effect:non-scaling-stroke; }
-.services-map-path-shadow { stroke-width:9; stroke-linecap:round; opacity:.025; }
-.services-zone-svg [data-services-map-path] { stroke-width:2.5; filter:drop-shadow(0 1px 1px rgba(16,47,41,.12)); }
+.services-map-path-shadow,.services-zone-svg [data-services-map-path] { fill:none; stroke:currentColor; }
+.services-map-path-shadow { vector-effect:non-scaling-stroke; stroke-width:9; stroke-linecap:round; opacity:.025; }
+.services-zone-svg [data-services-map-path] { stroke-width:1.9; stroke-linecap:round; filter:drop-shadow(0 1px 1px rgba(16,47,41,.1)); }
 .services-map-center > circle:first-child { fill:#fff; stroke:#b9d2c8; stroke-width:1.5; }
 .services-map-center > circle:nth-child(2) { fill:#e4f1eb; }
 .services-map-center text { fill:var(--ink); font-family:var(--font-general-sans),sans-serif; font-size:10px; font-weight:600; text-anchor:middle; }

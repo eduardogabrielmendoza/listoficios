@@ -66,8 +66,8 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
         gsap.set(serviceScenes[0], { autoAlpha: 1, y: 0, scale: 1 });
         gsap.set(serviceDots[0], { color: "var(--ink)", opacity: 1 });
         serviceMapPaths.forEach((path) => {
-          const length = path.getTotalLength();
-          const hiddenLength = length + 4;
+          const hiddenLength = path.getTotalLength() + 6;
+          path.dataset.servicesMapLength = String(hiddenLength);
           gsap.set(path, {
             autoAlpha: 0,
             strokeDasharray: `${hiddenLength} ${hiddenLength}`,
@@ -109,12 +109,19 @@ export default function HomeMotionController({ mode }: { mode: HomeMotionMode })
             .to(serviceDots[index], { opacity: 1, color: "var(--ink)", duration: 0.12 }, "<");
           if (index === 2 && serviceMapPaths.length) {
             servicesTimeline.to(serviceMapCenters, { autoAlpha: 1, scale: 1, duration: 0.22, ease: "power2.out" }, "<0.08");
+            const routeStart = servicesTimeline.duration();
+            servicesTimeline.to(serviceMapPaths, { autoAlpha: 1, duration: 0.001, ease: "none", immediateRender: false }, routeStart);
             for (let leg = 0; leg < 5; leg += 1) {
-              const paths = serviceMapPaths.filter((path) => path.dataset.servicesMapLeg === String(leg));
               const nodes = serviceMapNodes.filter((node) => node.dataset.servicesMapLeg === String(leg));
               servicesTimeline
-                .set(paths, { autoAlpha: 1 })
-                .to(paths, { strokeDashoffset: 0, duration: 0.68, ease: "none" })
+                .to(serviceMapPaths, {
+                  strokeDashoffset: (_index, path: SVGPathElement) => {
+                    const length = Number(path.dataset.servicesMapLength) || path.getTotalLength();
+                    return length * (1 - (leg + 1) / 5);
+                  },
+                  duration: 0.68,
+                  ease: "none",
+                })
                 .to(nodes, { autoAlpha: 1, scale: 1, duration: 0.18, ease: "power2.out" }, "-=0.02")
                 .to({}, { duration: 0.1 });
             }
